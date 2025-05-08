@@ -105,7 +105,7 @@ const fetchApi = async <T>(
 };
 
 // Upload de arquivos
-const uploadFile = async (
+export const uploadFile = async (
   endpoint: string,
   file: File,
   additionalData?: Record<string, any>
@@ -154,19 +154,24 @@ const uploadFile = async (
 
 // Serviços de API para Artigos
 export const ArtigoService = {
-  create: (artigo: Partial<Artigo>) =>
-    fetchApi<Artigo>("/artigo", "POST", artigo),
+  create: (idEvento: Partial<Evento>) =>
+    fetchApi<Evento>("/artigo", "POST", idEvento),
 
   getById: (id: string) => fetchApi<Artigo>(`/artigo/${id}`, "GET"),
 
   getByAutor: (idUsuario: string) =>
-    fetchApi<Artigo[]>(`/artigo/usuario/${idUsuario}`, "GET"),
+    fetchApi<Artigo[]>(`/artigo/autor/${idUsuario}`, "GET"),
 
   uploadArtigo: (
     id: string,
-    file: File,
-    additionalData?: Record<string, any>
-  ) => uploadFile(`/artigo/usuario/update/${id}`, file, additionalData),
+    formData: {
+      titulo: string,
+      autores: string,
+      areaTematica: string,
+      palavrasChave: string,
+      resumo: string,
+    },
+  ) => fetchApi<Evento>(`/artigo/${id}`, "POST", formData),
 };
 
 // Serviços de API para Avaliações
