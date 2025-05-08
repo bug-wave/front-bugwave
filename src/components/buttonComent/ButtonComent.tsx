@@ -11,7 +11,6 @@ type ButtonComentProps = {
   onComentarioChange: (event: React.ChangeEvent<HTMLTextAreaElement>) => void;
   onAddComment: (posicaoX: number, posicaoY: number) => Promise<void>;
   disabled: boolean;
-
 };
 
 const ButtonComent: React.FC<ButtonComentProps> = ({

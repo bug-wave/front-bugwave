@@ -6,7 +6,7 @@ import CommentViewer from "@/components/commentViewer/CommentViewer";
 
 // Tipo para comentários com coordenadas x e y
 type Comment = {
-  id: number;
+  id: string;
   x: number;
   y: number;
   text: string;
@@ -46,41 +46,6 @@ const VisualizarComentariosPage = () => {
         palavrasChave: ["IA", "Medicina", "Saúde"],
         caminhoPDF: "/pdf/ACEx_5.pdf",
       };
-
-      const comentariosMockados: Comment[] = [
-        {
-          id: 1,
-          x: 550,
-          y: 200,
-          text: "Esta seção precisa de mais referências bibliográficas atualizadas.",
-          author: "Prof. Carlos Santos",
-          timestamp: "10/05/2025 14:30",
-        },
-        {
-          id: 2,
-          x: 550,
-          y: 350,
-          text: "Excelente abordagem metodológica! Considere expandir a análise dos resultados.",
-          author: "Dra. Ana Ferreira",
-          timestamp: "11/05/2025 09:15",
-        },
-        {
-          id: 3,
-          x: 550,
-          y: 500,
-          text: "Revise esta conclusão, pois ela não aborda completamente os objetivos apresentados na introdução.",
-          author: "Prof. Carlos Santos",
-          timestamp: "11/05/2025 16:20",
-        },
-        {
-          id: 4,
-          x: 550,
-          y: 1500,
-          text: "Revise esta conclusão, pois ela não aborda completamente os objetivos apresentados na introdução.",
-          author: "Prof. Carlos Santos",
-          timestamp: "11/05/2025 16:20",
-        },
-      ];
 
       setArtigo(artigoMockado);
       setComments(comentariosMockados);
