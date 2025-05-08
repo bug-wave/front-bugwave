@@ -7,11 +7,19 @@ type ButtonComentProps = {
   role: "aluno" | "avaliador" | "coordenador";
   initialComments?: Comment[];
   onCommentChange?: (comments: Comment[]) => void;
+  comentarioTexto: string;
+  onComentarioChange (event: React.ChangeEvent<HTMLTextAreaElement>): void;
+  disabled: boolean,
+  onAddComment: (x: number, y: number) => Promise<void>
 };
 
 const ButtonComent: React.FC<ButtonComentProps> = ({
   role,
   initialComments = [],
+  onAddComment,
+  comentarioTexto,
+  onComentarioChange,
+  disabled,
   onCommentChange,
 }) => {
   const [adding, setAdding] = useState(false);

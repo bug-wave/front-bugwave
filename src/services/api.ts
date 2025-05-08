@@ -9,7 +9,7 @@ export interface ApiResponse<T = any> {
 }
 
 export interface Artigo {
-  id: string;
+  _id: string;
   titulo: string;
   autores: string[];
   resumo: string;
@@ -31,13 +31,12 @@ export interface Avaliacao {
 }
 
 export interface Comentario {
-  id?: string;
+  autor: string;
   texto: string;
-  posicaoX: number;
-  posicaoY: number;
-  artigoId: string;
-  autorId: string;
-  dataCriacao?: string;
+  trechoComentado: string;
+  x: number;
+  y: number;
+  criadoEm: Date;
 }
 
 export interface Evento {

@@ -2,18 +2,18 @@
 import React, { useEffect, useState } from "react";
 import { FaUser } from "react-icons/fa";
 
-export type Comment = {
-  id: number;
+export type Comentario = {
+  autor: string;
+  texto: string;
+  trechoComentado: string;
   x: number;
   y: number;
-  text: string;
-  author: string;
-  timestamp: string;
+  criadoEm: Date;
 };
 
 type CommentViewerProps = {
   className?: string;
-  comments: Comment[];
+  comments: Comentario[];
 };
 
 const CommentViewer: React.FC<CommentViewerProps> = ({
