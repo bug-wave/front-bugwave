@@ -1,8 +1,7 @@
+// CommentTool.tsx
 "use client";
-import React, { useState } from "react";
-import { FaEdit } from "react-icons/fa";
-import { FaTrash } from "react-icons/fa";
-import { FaUser } from "react-icons/fa";
+import React from "react";
+import { FaEdit, FaTrash, FaUser } from "react-icons/fa";
 
 export type Comment = {
   id: number;
@@ -13,22 +12,22 @@ export type Comment = {
 
 type CommentToolProps = {
   className?: string;
+  adding: boolean;
+  setAdding: React.Dispatch<React.SetStateAction<boolean>>;
 };
 
-const CommentTool: React.FC<CommentToolProps> = ({ className }) => {
-  const [adding, setAdding] = useState(false);
-  const [editingId, setEditingId] = useState<number | null>(null);
-  const [comments, setComments] = useState<Comment[]>([]);
-  const [tempPos, setTempPos] = useState<{ x: number; y: number } | null>(null);
-  const [tempText, setTempText] = useState("");
-  const [editActive, setEditActive] = useState(false);
-
-  const handleStartAdd = () => {
-    if (adding || editingId !== null) return;
-    setAdding(true);
-    setTempPos(null);
-    setTempText("");
-  };
+const CommentTool: React.FC<CommentToolProps> = ({
+  className,
+  adding,
+  setAdding,
+}) => {
+  const [editingId, setEditingId] = React.useState<number | null>(null);
+  const [comments, setComments] = React.useState<Comment[]>([]);
+  const [tempPos, setTempPos] = React.useState<{ x: number; y: number } | null>(
+    null
+  );
+  const [tempText, setTempText] = React.useState("");
+  const [editActive, setEditActive] = React.useState(false);
 
   const handleClickArea = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!adding || tempPos) return;
@@ -82,27 +81,21 @@ const CommentTool: React.FC<CommentToolProps> = ({ className }) => {
 
   return (
     <div
-      className={`absolute w-full h-full top-0 left-0 ${className || ""}`}
+      className={`absolute w-full h-full top-0 left-0 ${
+        adding == false ? "z-0" : "z-50"
+      }  ${className || ""}`}
       onClick={handleClickArea}
     >
-      <button
-        onClick={handleStartAdd}
-        disabled={adding || editingId !== null}
-        className="absolute top-20 left-20 z-10 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
-      >
-        Adicionar comentário
-      </button>
-
       {comments.map((comment) => (
         <div
           key={comment.id}
-          className="absolute group z-10"
+          className="absolute group z-50"
           style={{ top: comment.y, left: comment.x }}
         >
           <div
-            className={`w-4 h-4 ${
-              editActive == true ? "bg-transparent" : "bg-neutral-800 "
-            }  w-8 h-8 rounded-full flex items-center justify-center text-xl text-neutral-100 relative p-2`}
+            className={`w-8 h-8 absolute z-50 ${
+              editActive ? "bg-transparent" : "bg-neutral-800"
+            } rounded-full flex items-center justify-center text-xl text-neutral-100 relative p-2`}
           >
             <FaUser />
             <div className="w-auto max-w-[800px] h-auto absolute bottom-0 left-0 hidden group-hover:block bg-gray-800 text-black text-sm p-2 rounded-2xl rounded-bl-none shadow-lg shadow-gray-500 whitespace-nowrap transition-all duration-300">
@@ -123,7 +116,7 @@ const CommentTool: React.FC<CommentToolProps> = ({ className }) => {
                         onClick={() => handleEdit(comment.id)}
                         className=" hover:cursor-pointer text-white hover:text-yellow-500 text-lg"
                       >
-                        <FaEdit className="" />
+                        <FaEdit />
                       </button>
                       <button
                         onClick={() => handleDelete(comment.id)}

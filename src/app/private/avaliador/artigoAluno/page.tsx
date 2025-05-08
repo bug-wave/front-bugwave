@@ -1,8 +1,9 @@
 "use client";
 import React from "react";
 import { useRouter } from "next/navigation";
-import CommentTool from "@/components/commentTool/CommentTool";
+import ButtonComent from "@/components/buttonComent/ButtonComent";
 import WebViewer from "@/components/pdf-viewer/WebViewer";
+
 
 const Page = () => {
   const router = useRouter();
@@ -22,6 +23,7 @@ const Page = () => {
       >
         Voltar
       </button>
+      <ButtonComent />
     </div>
       {/* <CommentTool className="w-full h-full" /> */}
       <div className="flex justify-between bg-gray-200 h-[100vh]">
