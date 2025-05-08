@@ -10,7 +10,7 @@ export default function Home() {
     router.push("private/alunos");
   };
   const goCord = () => {
-    router.push("private/avaliador");
+    router.push("private/avaliador/home");
   };
   const goAval = () => {
     router.push("private/coordenador");
