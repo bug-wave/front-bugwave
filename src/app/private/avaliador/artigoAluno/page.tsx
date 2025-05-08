@@ -5,10 +5,12 @@ import ButtonComent from "@/components/buttonComent/ButtonComent";
 import WebViewer from "@/components/pdf-viewer/WebViewer";
 import { Comment } from "@/components/commentTool/CommentTool";
 import { FaSave } from "react-icons/fa";
+import StarRating from "@/components/starRating/StarRating";
 
 const Page = () => {
   const [comments, setComments] = useState<Comment[]>([]);
   const [isSaving, setIsSaving] = useState(false);
+  const [rating, setRating] = useState<number>(0);
 
   const router = useRouter();
   const back = () => {
@@ -20,6 +22,12 @@ const Page = () => {
     setComments(updatedComments);
     // Aqui você pode enviar os comentários para o backend ou armazená-los de outra forma
     console.log("Comentários atualizados:", updatedComments);
+  };
+
+  // Função para lidar com a mudança na avaliação por estrelas
+  const handleRatingChange = (newRating: number) => {
+    setRating(newRating);
+    console.log(`Nova avaliação: ${newRating} estrelas`);
   };
 
   // Função para salvar os comentários e redirecionar para a visualização do aluno
@@ -40,8 +48,8 @@ const Page = () => {
     }, 1000);
   };
 
-  const url =
-    "https://uploader-documents.s3.amazonaws.com/1746690033550-Trabalho%20Gest%C3%83%C2%A3o%20de%20Projetos%20Grupo%204.pdf?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAY2ZZXWMZNBMGRX7T%2F20250508%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20250508T074044Z&X-Amz-Expires=9999&X-Amz-Signature=e896702b58dbf23bda91089b61311438f2b3c3dbf0817f3f8095e73c3c230a92&X-Amz-SignedHeaders=host";
+  // Usar a URL do PDF da variável de ambiente
+  const url = process.env.NEXT_PUBLIC_PDF_URL || "/pdf/ACEx_5.pdf";
 
   return (
     <div className="w-full">
@@ -63,7 +71,11 @@ const Page = () => {
                 Titulo do Artigo
               </h1>
               <h1 className="font-semibold text-gray-800">Nome do Autor</h1>
-              <h1 className="font-semibold text-gray-800">Nota: </h1>
+              <div className="font-semibold text-gray-800">
+                <div className="flex flex-col gap-2">
+                  <span>Avaliação:</span>
+                </div>
+              </div>
               <h1 className="font-semibold text-gray-800">
                 Palavras-chave:{" "}
                 <span className="text-[#304358] font-medium">
@@ -81,7 +93,18 @@ const Page = () => {
           />
           <WebViewer pdfUrl={url} />
         </div>
-        <div className="bg-white w-[30%] min-h-screen"></div>
+        <div className="bg-white w-[30%] min-h-screen p-5 flex flex-col items-center">
+          <div className="mt-6 pt-4 ">
+            <h3 className="font-semibold text-gray-800 mb-3">
+              Avalie este artigo:
+            </h3>
+            <StarRating
+              initialRating={rating}
+              onChange={handleRatingChange}
+              size="lg"
+            />
+          </div>
+        </div>
       </div>
 
       {/* Botão de salvar fixado no canto inferior direito */}
