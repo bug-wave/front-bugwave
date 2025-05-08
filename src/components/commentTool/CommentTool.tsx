@@ -81,9 +81,7 @@ const CommentTool: React.FC<CommentToolProps> = ({
 
   return (
     <div
-      className={`absolute w-full h-full top-0 left-0 ${
-        adding == false ? "z-0" : "z-50"
-      }  ${className || ""}`}
+      className={`absolute top-0 w-full h-full ${className || ""}`}
       onClick={handleClickArea}
     >
       {comments.map((comment) => (

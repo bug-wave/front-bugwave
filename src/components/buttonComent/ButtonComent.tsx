@@ -12,20 +12,16 @@ const ButtonComent = () => {
   };
 
   return (
-    <div className="abolute top-0 left-0 w-full h-full ">
+    <div className=" w-[30%] h-[250vh] absolute top-12 z-10">
       <button
         onClick={handleStartAdd}
         disabled={adding}
-        className="px-4 py-2 absolute left-25 transition-y-1/2 top-1/6  bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+        className="px-4 py-2 absolute z-20 -left-[90%] top-96 transition-y-1/2  bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
       >
         Adicionar comentário
       </button>
 
-      <CommentTool
-        className="w-full h-full absolute top-0 left-0"
-        adding={adding}
-        setAdding={setAdding}
-      />
+      <CommentTool adding={adding} setAdding={setAdding} />
     </div>
   );
 };
