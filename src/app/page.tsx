@@ -13,7 +13,7 @@ export default function Home() {
     router.push("private/avaliador/home");
   };
   const goAval = () => {
-    router.push("private/coordenador/home");
+    router.push("private/coordenador/evento");
   };
 
   return (

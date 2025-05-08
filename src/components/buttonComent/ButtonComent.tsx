@@ -48,7 +48,7 @@ const ButtonComent: React.FC<ButtonComentProps> = ({
       {canAddComments && (
         <button
           onClick={handleClick}
-          className={`px-4 py-2 fixed z-20 top-5/12 left-[7%] transition-y-1/2 text-white rounded ${
+          className={`px-4 py-2 fixed z-20 top-[92%] right-[14%] transition-y-1/2 text-white rounded ${
             adding
               ? "bg-green-600 hover:bg-green-700"
               : "bg-blue-600 hover:bg-blue-700"
