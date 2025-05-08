@@ -14,17 +14,16 @@ import {
 
 // Interface para o artigo completo com detalhes
 interface ArtigoDetalhado {
-  id: string;
+  _id: string;
   titulo: string;
   autores: string[];
   resumo: string;
   status: string;
   caminhoPDF: string;
-  eventoId: string;
-  dataEnvio: string;
   totalComentarios?: number;
   palavrasChave?: string[];
   nota?: number;
+  comentarios: string[];
 }
 
 const ArtigoDetalhesPage = () => {
@@ -72,32 +71,46 @@ const ArtigoDetalhesPage = () => {
         }
 
         // Buscar comentários do artigo
-        const comentariosResponse = await fetch(
-          `http://localhost:5000/comentario/artigo/${artigoId}`
-        );
-
-        if (!comentariosResponse.ok) {
-          throw new Error(
-            `Erro ao carregar comentários: ${comentariosResponse.status}`
+        if (artigoData.comentarios && artigoData.comentarios.length > 0) {
+          const comentariosPromises = artigoData.comentarios.map(
+            (comentarioId: string) => {
+              return fetch(`http://localhost:5000/comentario/${comentarioId}`)
+                .then((res) => res.json())
+                .catch((err) => {
+                  console.error("Erro ao buscar comentário:", err);
+                  return null;
+                });
+            }
           );
+
+          const comentariosData = (
+            await Promise.all(comentariosPromises)
+          ).filter(Boolean);
+
+          // Adaptar o formato dos comentários para o componente ButtonComent
+          const comentariosAdaptados = comentariosData.map(
+            (comentario, index) => ({
+              id: index + 1, // Gerar IDs numéricos sequenciais para compatibilidade
+              text: comentario.texto || "",
+              x: comentario.posicaoX || 100,
+              y: comentario.posicaoY || 100,
+              timestamp: comentario.dataCriacao
+                ? new Date(comentario.dataCriacao).toLocaleString("pt-BR")
+                : "Data não disponível",
+              author: comentario.autorId
+                ? typeof comentario.autorId === "object"
+                  ? comentario.autorId.nome || "Avaliador"
+                  : "Avaliador"
+                : "Avaliador",
+            })
+          );
+
+          setComments(comentariosAdaptados);
         }
-
-        const comentariosData = await comentariosResponse.json();
-
-        // Adaptar o formato dos comentários para o componente ButtonComent
-        const comentariosAdaptados = comentariosData.map((comentario: any) => ({
-          id: comentario.id,
-          text: comentario.texto,
-          x: comentario.posicaoX || 100,
-          y: comentario.posicaoY || 100,
-          timestamp: new Date(comentario.dataCriacao).toLocaleString("pt-BR"),
-          author: comentario.autor || "Avaliador",
-        }));
-
-        setComments(comentariosAdaptados);
-      } catch (err: any) {
-        console.error("Erro ao carregar dados:", err);
-        setError(err.message || "Erro ao carregar dados do artigo");
+      } catch (err) {
+        const error = err as Error;
+        console.error("Erro ao carregar dados:", error);
+        setError(error.message || "Erro ao carregar dados do artigo");
       } finally {
         setLoading(false);
       }
@@ -220,7 +233,7 @@ const ArtigoDetalhesPage = () => {
 
   // Usar a URL do PDF da variável de ambiente ou do artigo
   const pdfUrl =
-    artigo?.caminhoPDF || process.env.NEXT_PUBLIC_PDF_URL || "/pdf/ACEx_5.pdf";
+    "https://uploader-documents.s3.amazonaws.com/1746733502582-Projeto_Pesquisa-G6.docx?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAY2ZZXWMZJFSZPEV3%2F20250508%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20250508T194505Z&X-Amz-Expires=3600&X-Amz-Signature=01f20822a8d7f75dc1783be078a0fc0a270493e322d2779b53b3d80daa1314c2&X-Amz-SignedHeaders=host";
 
   return (
     <div className="w-full">
@@ -233,9 +246,9 @@ const ArtigoDetalhesPage = () => {
         </button>
       </div>
       <div className="flex justify-between bg-gray-200 min-h-screen">
-        <div className=""></div>
+        <div className="w-14"></div>
         <div className="flex flex-col h-full">
-          <div className="bg-white min-h-screen w-fit p-10">
+          <div className="bg-white min-h-screen w-[25vw] p-10">
             <div className="flex flex-col gap-6 fixed w-[25vw]">
               <div className="w-20 h-20 rounded-full bg-blue-100 flex items-center justify-center">
                 <FaFilePdf className="text-3xl text-[#304358]" />

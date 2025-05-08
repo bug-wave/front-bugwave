@@ -287,7 +287,7 @@ const ArtigoAlunoPage = () => {
               <WebViewer
                 pdfUrl={artigo.caminhoPDF}
               />
-
+              
               {/* Botão para adicionar comentários */}
               <ButtonComent
                 role="avaliador"

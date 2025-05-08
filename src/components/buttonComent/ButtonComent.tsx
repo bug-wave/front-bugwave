@@ -8,9 +8,10 @@ type ButtonComentProps = {
   initialComments?: Comment[];
   onCommentChange?: (comments: Comment[]) => void;
   comentarioTexto: string;
-  onComentarioChange (event: React.ChangeEvent<HTMLTextAreaElement>): void;
-  disabled: boolean,
-  onAddComment: (x: number, y: number) => Promise<void>
+  onComentarioChange: (event: React.ChangeEvent<HTMLTextAreaElement>) => void;
+  onAddComment: (posicaoX: number, posicaoY: number) => Promise<void>;
+  disabled: boolean;
+
 };
 
 const ButtonComent: React.FC<ButtonComentProps> = ({

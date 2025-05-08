@@ -15,7 +15,7 @@ import {
   FaArrowLeft,
   FaDownload,
 } from "react-icons/fa";
-import { EventoService, ArtigoService } from "@/services/api";
+import { EventoService, ArtigoService, Evento } from "@/services/api";
 
 interface EventItem {
   id: string;
@@ -67,22 +67,65 @@ const ArtigosEventoPage = () => {
   useEffect(() => {
     const carregarEvento = async () => {
       try {
+        setLoading(true);
+
         if (!eventoId) {
           throw new Error("ID do evento não fornecido.");
         }
 
-        const response = await EventoService.getById(eventoId);
-        const evento = response.data;
+        // Buscar informações do evento
+        const eventoResponse = await EventoService.getById(eventoId);
 
+        if (!eventoResponse.success || !eventoResponse.data) {
+          throw new Error("Erro ao carregar dados do evento.");
+        }
+
+        const evento = eventoResponse.data;
+
+        // Atualizar informações do evento na interface
         setInfoEvento({
-          titulo: evento.titulo,
-          descricao: evento.descricao,
+          titulo: evento.titulo || "",
+          descricao: evento.descricao || "",
           dataInicio: new Date(evento.dataInicio),
           dataFim: new Date(evento.dataFim),
         });
 
-        const artigosResponse = await ArtigoService.getByEventoId(eventoId);
-        setArtigos(artigosResponse.data);
+        // Array para armazenar os artigos carregados
+        const artigosCarregados: ArtigoItem[] = [];
+
+        // Verificar se o evento possui artigos
+        if (evento.artigos && evento.artigos.length > 0) {
+          // Criar um array de promessas para buscar cada artigo pelo ID
+
+          const artigosPromises = evento.artigos.map((artigoId) =>
+            ArtigoService.getById(artigoId)
+          );
+
+          // Executar todas as promessas em paralelo
+          const artigoResults = await Promise.all(artigosPromises);
+
+          // Filtrar apenas os resultados bem sucedidos e mapear para objetos Artigo
+          artigosCarregados.push(
+            ...artigoResults
+              .filter((response) => response.success && response.data)
+              .map((response) => ({
+                id: response.data?._id ?? "",
+                titulo: response.data?.titulo ?? "",
+                autores: response.data?.autores ?? [],
+                resumo: response.data?.resumo ?? "",
+                status: response.data?.status ?? "",
+                caminhoPDF: response.data?.caminhoPDF ?? "",
+                eventoId: eventoId,
+                dataEnvio: new Date(
+                  response.data?.dataCriacao ?? ""
+                ).toLocaleDateString("pt-BR"),
+                totalComentarios: 0, // Valor padrão, poderia ser atualizado com uma chamada adicional
+              }))
+          );
+        }
+
+        // Atualizar o estado com os artigos carregados
+        setArtigos(artigosCarregados);
       } catch (error) {
         console.error("Erro ao carregar evento e artigos:", error);
       } finally {
@@ -100,6 +143,8 @@ const ArtigosEventoPage = () => {
 
   // Função para visualizar detalhes de um artigo
   const visualizarArtigo = (artigoId: string) => {
+    console.log(artigoId);
+
     router.push(`/private/coordenador/artigo-detalhes?id=${artigoId}`);
   };
 
@@ -116,6 +161,7 @@ const ArtigosEventoPage = () => {
 
     return matchStatus && matchTermo;
   });
+  console.log(artigosFiltrados);
 
   // Função que retorna informações de status do artigo (ícone, cor, texto)
   const getStatusInfo = (status: string) => {
