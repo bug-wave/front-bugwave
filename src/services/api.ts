@@ -1,265 +1,232 @@
-// Serviço API centralizado para fazer chamadas HTTP ao backend
+// API base URL
+const API_BASE_URL = "http://localhost:5000";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
-
-// Interface genérica para resposta da API
-interface ApiResponse<T = any> {
+// Tipos principais
+export interface ApiResponse<T = any> {
   success: boolean;
   data?: T;
   error?: string;
 }
 
-// Funções utilitárias para chamadas HTTP
-const api = {
-  async get<T>(endpoint: string): Promise<ApiResponse<T>> {
-    try {
-      const response = await fetch(`${API_URL}${endpoint}`);
+export interface Artigo {
+  id: string;
+  titulo: string;
+  autores: string[];
+  resumo: string;
+  caminhoPDF: string;
+  status: string;
+  dataCriacao: string;
+  idAutor: string;
+  idEvento?: string;
+}
 
-      if (!response.ok) {
-        return {
-          success: false,
-          error: `Erro ${response.status}: ${response.statusText}`,
-        };
-      }
+export interface Avaliacao {
+  id?: string;
+  artigoId: string;
+  avaliadorId: string;
+  nota: number;
+  comentarios: string;
+  dataCriacao?: string;
+  isFinal?: boolean;
+}
 
-      const data = await response.json();
-      return { success: true, data };
-    } catch (err: any) {
-      console.error(`Erro na chamada GET para ${endpoint}:`, err);
+export interface Comentario {
+  id?: string;
+  texto: string;
+  posicaoX: number;
+  posicaoY: number;
+  artigoId: string;
+  autorId: string;
+  dataCriacao?: string;
+}
+
+export interface Evento {
+  id: string;
+  titulo: string;
+  descricao: string;
+  dataInicio: string;
+  dataFim: string;
+  ativo: boolean;
+}
+
+export interface Usuario {
+  id: string;
+  nome: string;
+  email: string;
+  senha?: string;
+  papel: "ALUNO" | "AVALIADOR" | "COORDENADOR";
+}
+
+// Helper de requisições HTTP
+const fetchApi = async <T>(
+  endpoint: string,
+  method: "GET" | "POST" | "PUT" | "DELETE" = "GET",
+  body?: any,
+  headers?: HeadersInit
+): Promise<ApiResponse<T>> => {
+  try {
+    const options: RequestInit = {
+      method,
+      headers: {
+        "Content-Type": "application/json",
+        ...headers,
+      },
+      credentials: "include", // Para suporte a cookies de autenticação
+    };
+
+    if (body && method !== "GET") {
+      options.body = JSON.stringify(body);
+    }
+
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, options);
+    const data = await response.json();
+
+    if (!response.ok) {
       return {
         success: false,
-        error: err.message || "Erro desconhecido na requisição",
+        error:
+          data.message || `Erro ${response.status}: ${response.statusText}`,
       };
     }
-  },
 
-  async post<T>(endpoint: string, body: any): Promise<ApiResponse<T>> {
-    try {
-      const response = await fetch(`${API_URL}${endpoint}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(body),
+    return {
+      success: true,
+      data,
+    };
+  } catch (error: any) {
+    return {
+      success: false,
+      error: error.message || "Erro desconhecido na requisição",
+    };
+  }
+};
+
+// Upload de arquivos
+const uploadFile = async (
+  endpoint: string,
+  file: File,
+  additionalData?: Record<string, any>
+): Promise<ApiResponse> => {
+  try {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    // Adicionar dados extras, se houver
+    if (additionalData) {
+      Object.entries(additionalData).forEach(([key, value]) => {
+        formData.append(
+          key,
+          typeof value === "object" ? JSON.stringify(value) : String(value)
+        );
       });
+    }
 
-      if (!response.ok) {
-        return {
-          success: false,
-          error: `Erro ${response.status}: ${response.statusText}`,
-        };
-      }
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      method: "POST",
+      body: formData,
+      credentials: "include",
+    });
 
-      const data = await response.json();
-      return { success: true, data };
-    } catch (err: any) {
-      console.error(`Erro na chamada POST para ${endpoint}:`, err);
+    const data = await response.json();
+
+    if (!response.ok) {
       return {
         success: false,
-        error: err.message || "Erro desconhecido na requisição",
+        error:
+          data.message || `Erro ${response.status}: ${response.statusText}`,
       };
     }
-  },
 
-  async put<T>(endpoint: string, body: any): Promise<ApiResponse<T>> {
-    try {
-      const response = await fetch(`${API_URL}${endpoint}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(body),
-      });
+    return {
+      success: true,
+      data,
+    };
+  } catch (error: any) {
+    return {
+      success: false,
+      error: error.message || "Erro desconhecido ao enviar arquivo",
+    };
+  }
+};
 
-      if (!response.ok) {
-        return {
-          success: false,
-          error: `Erro ${response.status}: ${response.statusText}`,
-        };
-      }
+// Serviços de API para Artigos
+export const ArtigoService = {
+  create: (artigo: Partial<Artigo>) =>
+    fetchApi<Artigo>("/artigo", "POST", artigo),
 
-      const data = await response.json();
-      return { success: true, data };
-    } catch (err: any) {
-      console.error(`Erro na chamada PUT para ${endpoint}:`, err);
-      return {
-        success: false,
-        error: err.message || "Erro desconhecido na requisição",
-      };
-    }
-  },
+  getById: (id: string) => fetchApi<Artigo>(`/artigo/${id}`, "GET"),
 
-  async delete<T>(endpoint: string): Promise<ApiResponse<T>> {
-    try {
-      const response = await fetch(`${API_URL}${endpoint}`, {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
+  getByAutor: (idUsuario: string) =>
+    fetchApi<Artigo[]>(`/artigo/usuario/${idUsuario}`, "GET"),
 
-      if (!response.ok) {
-        return {
-          success: false,
-          error: `Erro ${response.status}: ${response.statusText}`,
-        };
-      }
+  getByEventoId: (eventoId: string) =>
+    fetchApi<Artigo[]>(`/artigo/evento/${eventoId}`, "GET"),
 
-      // DELETE pode retornar sem conteúdo
-      if (response.status === 204) {
-        return { success: true };
-      }
-
-      const data = await response.json();
-      return { success: true, data };
-    } catch (err: any) {
-      console.error(`Erro na chamada DELETE para ${endpoint}:`, err);
-      return {
-        success: false,
-        error: err.message || "Erro desconhecido na requisição",
-      };
-    }
-  },
-
-  async upload<T>(
-    endpoint: string,
+  uploadArtigo: (
+    id: string,
     file: File,
     additionalData?: Record<string, any>
-  ): Promise<ApiResponse<T>> {
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-
-      // Adiciona dados adicionais ao FormData se fornecidos
-      if (additionalData) {
-        Object.entries(additionalData).forEach(([key, value]) => {
-          formData.append(key, value);
-        });
-      }
-
-      const response = await fetch(`${API_URL}${endpoint}`, {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!response.ok) {
-        return {
-          success: false,
-          error: `Erro ${response.status}: ${response.statusText}`,
-        };
-      }
-
-      const data = await response.json();
-      return { success: true, data };
-    } catch (err: any) {
-      console.error(`Erro no upload para ${endpoint}:`, err);
-      return {
-        success: false,
-        error: err.message || "Erro desconhecido no upload",
-      };
-    }
-  },
+  ) => uploadFile(`/artigo/usuario/update/${id}`, file, additionalData),
 };
 
-// Serviços específicos para cada entidade
-export const ArtigoService = {
-  // Obter todos os artigos
-  getAll: async () => {
-    return api.get("/artigo");
-  },
-
-  // Obter artigo por ID
-  getById: async (id: string) => {
-    return api.get(`/artigo/${id}`);
-  },
-
-  // Obter artigos por autor
-  getByAutor: async (idAutor: string) => {
-    return api.get(`/artigo/usuario/${idAutor}`);
-  },
-
-  // Criar um novo artigo
-  create: async (artigoData: any) => {
-    return api.post("/artigo", artigoData);
-  },
-
-  // Fazer upload de um arquivo PDF para um artigo
-  uploadPDF: async (id: string, file: File) => {
-    return api.upload(`/artigo/usuario/update/${id}`, file);
-  },
-};
-
-export const EventoService = {
-  // Obter todos os eventos
-  getAll: async () => {
-    return api.get("/evento");
-  },
-
-  // Obter eventos ativos (data atual entre início e fim)
-  getAtivos: async () => {
-    return api.get("/evento/ativos");
-  },
-
-  // Criar um novo evento
-  create: async (eventoData: any) => {
-    return api.post("/evento", eventoData);
-  },
-
-  // Deletar um evento
-  delete: async (id: string) => {
-    return api.delete(`/evento/${id}`);
-  },
-};
-
-export const ComentarioService = {
-  // Criar um novo comentário
-  create: async (comentarioData: any) => {
-    return api.post("/comentario", comentarioData);
-  },
-
-  // Editar um comentário existente
-  update: async (comentarioData: any) => {
-    return api.post("/comentario/editar", comentarioData);
-  },
-
-  // Excluir um comentário
-  delete: async (id: string) => {
-    return api.delete(`/comentario/excluir/${id}`);
-  },
-
-  // Obter comentários de um artigo
-  getByArtigoId: async (artigoId: string) => {
-    return api.get(`/comentario/artigo/${artigoId}`);
-  },
-};
-
+// Serviços de API para Avaliações
 export const AvaliacaoService = {
-  // Criar uma nova avaliação
-  create: async (avaliacaoData: any) => {
-    return api.post("/avaliacao", avaliacaoData);
-  },
+  create: (avaliacao: Partial<Avaliacao>) =>
+    fetchApi<Avaliacao>("/avaliacao", "POST", avaliacao),
 
-  // Editar uma avaliação existente
-  update: async (id: string, avaliacaoData: any) => {
-    return api.put(`/avaliacao/editar/${id}`, avaliacaoData);
-  },
+  delete: (idAvaliacao: string) =>
+    fetchApi<void>(`/avaliacao/excluir/${idAvaliacao}`, "DELETE"),
 
-  // Excluir uma avaliação
-  delete: async (id: string) => {
-    return api.delete(`/avaliacao/excluir/${id}`);
-  },
+  update: (idAvaliacao: string, avaliacao: Partial<Avaliacao>) =>
+    fetchApi<Avaliacao>(`/avaliacao/editar/${idAvaliacao}`, "PUT", avaliacao),
+
+  getByArtigoId: (artigoId: string) =>
+    fetchApi<Avaliacao[]>(`/avaliacao/artigo/${artigoId}`, "GET"),
 };
 
+// Serviços de API para Comentários
+export const ComentarioService = {
+  create: (comentario: Partial<Comentario>) =>
+    fetchApi<Comentario>("/comentario", "POST", comentario),
+
+  update: (comentario: Partial<Comentario>) =>
+    fetchApi<Comentario>("/comentario/editar", "POST", comentario),
+
+  delete: (idComentario: string) =>
+    fetchApi<void>(`/comentario/excluir/${idComentario}`, "DELETE"),
+
+  getByArtigoId: (artigoId: string) =>
+    fetchApi<Comentario[]>(`/comentario/artigo/${artigoId}`, "GET"),
+};
+
+// Serviços de API para Eventos
+export const EventoService = {
+  create: (evento: Partial<Evento>) =>
+    fetchApi<Evento>("/evento", "POST", evento),
+
+  delete: (id: string) => fetchApi<void>(`/evento/${id}`, "DELETE"),
+
+  getById: (id: string) => fetchApi<Evento>(`/evento/${id}`, "GET"),
+
+  getAtivos: () => fetchApi<Evento[]>("/evento/ativos", "GET"),
+};
+
+// Serviços de API para Usuários
 export const UsuarioService = {
-  // Criar um novo usuário
-  create: async (usuarioData: any) => {
-    return api.post("/usuario", usuarioData);
-  },
+  create: (usuario: Partial<Usuario>) =>
+    fetchApi<Usuario>("/usuario", "POST", usuario),
 
-  // Login de usuário
-  login: async (credenciais: { email: string; senha: string }) => {
-    return api.post("/usuario/login", credenciais);
-  },
+  login: (email: string, senha: string) =>
+    fetchApi<{ user: Usuario; token: string }>("/usuario/login", "POST", {
+      email,
+      senha,
+    }),
 };
 
-export default api;
+export default {
+  ArtigoService,
+  AvaliacaoService,
+  ComentarioService,
+  EventoService,
+  UsuarioService,
+};

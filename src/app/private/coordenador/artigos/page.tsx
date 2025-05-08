@@ -15,6 +15,18 @@ import {
   FaArrowLeft,
   FaDownload,
 } from "react-icons/fa";
+import { EventoService, ArtigoService } from "@/services/api";
+
+interface EventItem {
+  id: string;
+  titulo: string;
+  descricao: string;
+  dataInicio: Date;
+  dataFim: Date;
+  artigos: string[];
+  avaliadores: string[];
+  criadoPor: string;
+}
 
 interface ArtigoItem {
   id: string;
@@ -32,7 +44,7 @@ const ArtigosEventoPage = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const eventoId = searchParams.get("eventoId");
-
+  const [eventos, setEventos] = useState<EventItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [artigos, setArtigos] = useState<ArtigoItem[]>([]);
   const [filtroStatus, setFiltroStatus] = useState("");
@@ -53,94 +65,33 @@ const ArtigosEventoPage = () => {
 
   // Carregar dados do evento e seus artigos
   useEffect(() => {
-    const carregarDados = async () => {
-      if (!eventoId) {
-        router.push("/private/coordenador/home");
-        return;
-      }
-
+    const carregarEvento = async () => {
       try {
-        // Carregar informações do evento
-        const eventoResponse = await fetch(`/api/eventos/${eventoId}`);
-        const eventoData = await eventoResponse.json();
+        if (!eventoId) {
+          throw new Error("ID do evento não fornecido.");
+        }
+
+        const response = await EventoService.getById(eventoId);
+        const evento = response.data;
+
         setInfoEvento({
-          titulo: eventoData.titulo,
-          descricao: eventoData.descricao,
-          dataInicio: new Date(eventoData.dataInicio),
-          dataFim: new Date(eventoData.dataFim),
+          titulo: evento.titulo,
+          descricao: evento.descricao,
+          dataInicio: new Date(evento.dataInicio),
+          dataFim: new Date(evento.dataFim),
         });
 
-        // Carregar artigos do evento
-        const artigosResponse = await fetch(`/api/eventos/${eventoId}/artigos`);
-        const artigosData = await artigosResponse.json();
-        setArtigos(artigosData);
+        const artigosResponse = await ArtigoService.getByEventoId(eventoId);
+        setArtigos(artigosResponse.data);
       } catch (error) {
-        console.error("Erro ao carregar dados:", error);
-        // Dados mockados para desenvolvimento
-        setInfoEvento({
-          titulo: "Conferência Nacional de Tecnologia 2025",
-          descricao:
-            "Evento anual que reúne pesquisadores e profissionais da área de tecnologia.",
-          dataInicio: new Date("2025-07-15"),
-          dataFim: new Date("2025-07-20"),
-        });
-
-        setArtigos([
-          {
-            id: "1",
-            titulo: "Inteligência Artificial na Medicina",
-            autores: ["Maria Silva", "João Oliveira"],
-            resumo: "Este artigo discute o impacto da IA na medicina moderna.",
-            status: "APROVADO",
-            caminhoPDF: "/uploads/artigos/artigo1.pdf",
-            eventoId: eventoId || "1",
-            dataEnvio: "15/04/2025",
-            totalComentarios: 4,
-          },
-          {
-            id: "2",
-            titulo: "Energias Renováveis no Brasil",
-            autores: ["Pedro Santos", "Ana Ferreira"],
-            resumo:
-              "Uma análise sobre o panorama das energias renováveis no Brasil.",
-            status: "EM_AVALIACAO",
-            caminhoPDF: "/uploads/artigos/artigo2.pdf",
-            eventoId: eventoId || "1",
-            dataEnvio: "20/03/2025",
-            totalComentarios: 2,
-          },
-          {
-            id: "3",
-            titulo: "Big Data e Aprendizado de Máquina",
-            autores: ["Carlos Mendes", "Lúcia Faria"],
-            resumo:
-              "Análise das aplicações de Big Data combinado com técnicas de Machine Learning.",
-            status: "REPROVADO",
-            caminhoPDF: "/uploads/artigos/artigo3.pdf",
-            eventoId: eventoId || "1",
-            dataEnvio: "10/04/2025",
-            totalComentarios: 7,
-          },
-          {
-            id: "4",
-            titulo: "Impacto da Agricultura Digital",
-            autores: ["Roberto Lima", "Fernanda Costa"],
-            resumo:
-              "Estudo sobre como a tecnologia está transformando a agricultura tradicional.",
-            status: "REVISAO_SOLICITADA",
-            caminhoPDF: "/uploads/artigos/artigo4.pdf",
-            eventoId: eventoId || "1",
-            dataEnvio: "05/05/2025",
-            totalComentarios: 3,
-          },
-        ]);
+        console.error("Erro ao carregar evento e artigos:", error);
       } finally {
         setLoading(false);
       }
     };
 
-    carregarDados();
-  }, [eventoId, router]);
+    carregarEvento();
+  }, [eventoId]);
 
   // Função para voltar para a página de eventos
   const voltarParaEventos = () => {
