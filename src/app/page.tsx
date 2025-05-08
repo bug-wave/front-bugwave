@@ -7,13 +7,13 @@ export default function Home() {
   const router = useRouter();
 
   const goAluno = () => {
-    router.push("private/alunos");
+    router.push("private/alunos/home");
   };
   const goCord = () => {
-    router.push("private/avaliador");
+    router.push("private/avaliador/home");
   };
   const goAval = () => {
-    router.push("private/coordenador");
+    router.push("private/coordenador/home");
   };
 
   return (
