@@ -9,7 +9,7 @@ export interface ApiResponse<T = any> {
 }
 
 export interface Artigo {
-  id: string;
+  _id: string;
   titulo: string;
   autores: string[];
   resumo: string;
@@ -18,6 +18,7 @@ export interface Artigo {
   dataCriacao: string;
   idAutor: string;
   idEvento?: string;
+  comentarios: string[];
 }
 
 export interface Avaliacao {
@@ -44,9 +45,11 @@ export interface Evento {
   id: string;
   titulo: string;
   descricao: string;
-  dataInicio: string;
-  dataFim: string;
-  ativo: boolean;
+  dataInicio: Date;
+  dataFim: Date;
+  artigos: string[]; // Added this property
+  avaliadores: string[];
+  criadoPor: string;
 }
 
 export interface Usuario {
@@ -79,6 +82,7 @@ const fetchApi = async <T>(
     }
 
     const response = await fetch(`${API_BASE_URL}${endpoint}`, options);
+
     const data = await response.json();
 
     if (!response.ok) {
@@ -159,9 +163,6 @@ export const ArtigoService = {
   getByAutor: (idUsuario: string) =>
     fetchApi<Artigo[]>(`/artigo/usuario/${idUsuario}`, "GET"),
 
-  getByEventoId: (eventoId: string) =>
-    fetchApi<Artigo[]>(`/artigo/evento/${eventoId}`, "GET"),
-
   uploadArtigo: (
     id: string,
     file: File,
@@ -195,8 +196,13 @@ export const ComentarioService = {
   delete: (idComentario: string) =>
     fetchApi<void>(`/comentario/excluir/${idComentario}`, "DELETE"),
 
+  getByComentarioId: (comentarioId: string) =>
+    fetchApi<Comentario[]>(`/comentario/${comentarioId}`, "GET"),
+
   getByArtigoId: (artigoId: string) =>
     fetchApi<Comentario[]>(`/comentario/artigo/${artigoId}`, "GET"),
+
+  getById: (id: string) => fetchApi<Comentario>(`/comentario/${id}`, "GET"),
 };
 
 // Serviços de API para Eventos
@@ -209,6 +215,9 @@ export const EventoService = {
   getById: (id: string) => fetchApi<Evento>(`/evento/${id}`, "GET"),
 
   getAtivos: () => fetchApi<Evento[]>("/evento/ativos", "GET"),
+
+  getByEventoId: (eventoId: string) =>
+    fetchApi<Artigo[]>(`/evento/${eventoId}`, "GET"),
 };
 
 // Serviços de API para Usuários
@@ -223,10 +232,12 @@ export const UsuarioService = {
     }),
 };
 
-export default {
+const ApiServices = {
   ArtigoService,
   AvaliacaoService,
   ComentarioService,
   EventoService,
   UsuarioService,
 };
+
+export default ApiServices;

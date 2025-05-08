@@ -290,10 +290,17 @@ const ArtigoAlunoPage = () => {
               />
 
               {/* Componente de comentários sobrepostos */}
-              <CommentViewer comentarios={comentarios} />
 
               {/* Botão para adicionar comentários */}
               <ButtonComent
+                role="avaliador"
+                initialComments={comentarios.map((comentario, index) => ({
+                  key: index,
+                  id: comentario.id ? Number(comentario.id) : index, // Convert id to number or use index as fallback
+                  x: comentario.posicaoX,
+                  y: comentario.posicaoY,
+                  text: comentario.texto,
+                }))}
                 onAddComment={adicionarComentario}
                 comentarioTexto={comentarioTexto}
                 onComentarioChange={handleComentarioChange}

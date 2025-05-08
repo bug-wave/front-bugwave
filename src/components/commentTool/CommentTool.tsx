@@ -148,9 +148,9 @@ const CommentTool: React.FC<CommentToolProps> = ({
       className={`absolute top-0 w-full h-full ${className || ""}`}
       onClick={canEdit ? handleClickArea : undefined}
     >
-      {comments.map((comment) => (
+      {comments.map((comment, index) => (
         <div
-          key={comment.id}
+          key={index}
           className="absolute group z-50"
           style={{ top: comment.y, left: comment.x }}
         >
