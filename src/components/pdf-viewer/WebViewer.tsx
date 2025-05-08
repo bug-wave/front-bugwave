@@ -26,7 +26,7 @@ export default function WebViewer({pdfUrl}: WebViewerProps) {
 
 
     return (
-        <div className="w-[30%]">
+        <div className="">
             <div className="webviewer" ref={viewer} style={{height: "100vh"}}></div>
         </div>
 
