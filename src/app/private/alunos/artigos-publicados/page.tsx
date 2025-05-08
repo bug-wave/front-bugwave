@@ -33,7 +33,7 @@ const AlunosPage = () => {
         setIsLoading(true);
 
         // Obtém o ID do usuário do localStorage ou alguma forma de estado global
-        const idUsuario = localStorage.getItem("userId") || "";
+        const idUsuario = "681ce417b9b5c2938e870c4b";
 
         if (!idUsuario) {
           throw new Error("Usuário não identificado");
