@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import WebViewer from "@/components/pdf-viewer/WebViewer";
-import ButtonComent from "@/components/buttonComent/ButtonComent";
+import CommentViewer from "@/components/commentViewer/CommentViewer";
 
 // Tipo para comentários com coordenadas x e y
 type Comment = {
@@ -14,7 +14,7 @@ type Comment = {
   timestamp: string;
 };
 
-const VisualizationPage = () => {
+const VisualizarComentariosPage = () => {
   const router = useRouter();
   type Artigo = {
     id: string;
@@ -31,7 +31,7 @@ const VisualizationPage = () => {
   const [error] = useState<string | null>(null);
 
   const back = () => {
-    router.push("/private/alunos");
+    router.push("/private/alunos/artigos-publicados");
   };
 
   useEffect(() => {
@@ -50,7 +50,7 @@ const VisualizationPage = () => {
       const comentariosMockados: Comment[] = [
         {
           id: 1,
-          x: 150,
+          x: 550,
           y: 200,
           text: "Esta seção precisa de mais referências bibliográficas atualizadas.",
           author: "Prof. Carlos Santos",
@@ -58,7 +58,7 @@ const VisualizationPage = () => {
         },
         {
           id: 2,
-          x: 300,
+          x: 550,
           y: 350,
           text: "Excelente abordagem metodológica! Considere expandir a análise dos resultados.",
           author: "Dra. Ana Ferreira",
@@ -66,8 +66,16 @@ const VisualizationPage = () => {
         },
         {
           id: 3,
-          x: 400,
+          x: 550,
           y: 500,
+          text: "Revise esta conclusão, pois ela não aborda completamente os objetivos apresentados na introdução.",
+          author: "Prof. Carlos Santos",
+          timestamp: "11/05/2025 16:20",
+        },
+        {
+          id: 4,
+          x: 550,
+          y: 1500,
           text: "Revise esta conclusão, pois ela não aborda completamente os objetivos apresentados na introdução.",
           author: "Prof. Carlos Santos",
           timestamp: "11/05/2025 16:20",
@@ -118,13 +126,13 @@ const VisualizationPage = () => {
         </button>
       </div>
       <div className="flex justify-between bg-gray-200 min-h-screen">
-        {/* Coluna da esquerda */}
-        <div className="flex flex-col h-full">
-          <div className="bg-white min-h-screen w-fit p-10">
-            <div className="flex flex-col gap-6">
+        <div className=""></div>
+        <div className="flex flex-col h-auto">
+          <div className="bg-white w-[25vw] min-h-screen p-10 h-full">
+            <div className="flex flex-col gap-6 fixed">
               <div className="w-20 h-20 rounded-full bg-gray-200"></div>
               <h1 className="font-bold text-xl text-[#304358]">
-                {artigo?.titulo}
+                {artigo?.titulo || "Título não disponível"}
               </h1>
               <h1 className="font-semibold text-gray-800">
                 Autor: {artigo?.autor}
@@ -152,26 +160,14 @@ const VisualizationPage = () => {
             </div>
           </div>
         </div>
-
-        {/* Coluna central - PDF com comentários */}
-        <div className="w-[65%] h-screen relative">
-          <ButtonComent
-            role="aluno"
-            initialComments={comments}
-            onCommentChange={(updatedComments) => {
-              // Alunos apenas visualizam, mas se precisar
-              // fazer algo quando mudarem os comentários
-              console.log("Comentários visualizados:", updatedComments);
-            }}
-          />
+        <div className="w-[30%] h-full relative">
+          <CommentViewer comments={comments} className="absolute z-10" />
           <WebViewer pdfUrl={url} />
         </div>
-
-        {/* Coluna da direita */}
-        <div className="bg-white w-[15%] min-h-screen"></div>
+        <div className="bg-white w-[30%] min-h-screen"></div>
       </div>
     </div>
   );
 };
 
-export default VisualizationPage;
+export default VisualizarComentariosPage;
