@@ -52,7 +52,7 @@ const ButtonComent: React.FC<ButtonComentProps> = ({
   };
 
   return (
-    <div className="w-[30%] h-full absolute top-12 z-10">
+    <div className="w-[30%] h-full absolute z-10">
       {canAddComments && (
         <button
           onClick={handleClick}

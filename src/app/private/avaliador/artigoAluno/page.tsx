@@ -244,7 +244,7 @@ const ArtigoDetalhesPage = () => {
       <div className="flex justify-between bg-gray-200 min-h-screen">
         <div className="w-14"></div>
         <div className="flex flex-col h-auto">
-          <div className="bg-white min-h-screen h-full w-[25vw] p-4">
+          <div className="bg-white min-h-screen h-full w-[25vw] p-4 shadow-2xl shadow-black">
             <div className="flex flex-col gap-6 fixed h-full w-[25vw]">
               <div className="w-20 h-20 rounded-full bg-blue-100 flex items-center justify-center">
                 <FaFilePdf className="text-3xl text-[#304358]" />
@@ -289,16 +289,6 @@ const ArtigoDetalhesPage = () => {
               )}
 
               {/* Componente de avaliação por estrelas */}
-              <div className="mt-6 pt-4 border-t border-gray-200">
-                <h3 className="font-semibold text-gray-800 mb-3">
-                  Avaliação final:
-                </h3>
-                <StarRating
-                  initialRating={rating}
-                  onChange={handleRatingChange}
-                  size="lg"
-                />
-              </div>
             </div>
           </div>
         </div>
@@ -308,9 +298,22 @@ const ArtigoDetalhesPage = () => {
             initialComments={comments}
             onCommentChange={handleCommentChange}
           />
-          <WebViewer pdfUrl={pdfUrl} />
+          <div className="shadow-xl shadow-black/50">
+            <WebViewer pdfUrl={pdfUrl} />
+          </div>
         </div>
-        <div className="bg-white w-[30%] min-h-screen"></div>
+        <div className="bg-white w-[25vw] min-h-screen p-10 shadow-2xl shadow-black">
+          <div className=" flex items-start flex-col">
+            <h3 className="font-semibold text-gray-800 mb-3">
+              Avaliação final:
+            </h3>
+            <StarRating
+              initialRating={rating}
+              onChange={handleRatingChange}
+              size="lg"
+            />
+          </div>
+        </div>
       </div>
 
       {/* Botão de salvar fixado no canto inferior direito */}
