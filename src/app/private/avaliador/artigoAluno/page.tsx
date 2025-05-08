@@ -1,7 +1,7 @@
 "use client";
 import React from "react";
 import { useRouter } from "next/navigation";
-import CommentTool from "@/components/commentTool/CommentTool";
+import ButtonComent from "@/components/buttonComent/ButtonComent";
 
 const Page = () => {
   const router = useRouter();
@@ -18,7 +18,8 @@ const Page = () => {
       >
         Voltar
       </button>
-      <CommentTool className="w-full h-full" />
+
+      <ButtonComent />
     </div>
   );
 };
