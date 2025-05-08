@@ -12,6 +12,7 @@ import {
   Artigo,
   Comentario,
 } from "@/services/api";
+import WebViewer from "@/components/pdf-viewer/WebViewer";
 
 const ArtigoAlunoPage = () => {
   const router = useRouter();
@@ -51,13 +52,14 @@ const ArtigoAlunoPage = () => {
         if (!artigoResponse.success || !artigoResponse.data) {
           throw new Error("Erro ao carregar o artigo");
         }
-
         setArtigo(artigoResponse.data);
 
         // Carregar comentários do artigo
         const comentariosResponse = await ComentarioService.getByArtigoId(
           artigoId
         );
+
+        console.log(comentariosResponse)
 
         if (comentariosResponse.success && comentariosResponse.data) {
           setComentarios(comentariosResponse.data);
@@ -86,7 +88,7 @@ const ArtigoAlunoPage = () => {
   };
 
   // Função para adicionar um novo comentário
-  const adicionarComentario = async (posicaoX: number, posicaoY: number) => {
+  const adicionarComentario = async (x: number, y: number) => {
     if (!comentarioTexto.trim()) {
       alert("Por favor, digite um comentário");
       return;
@@ -108,11 +110,10 @@ const ArtigoAlunoPage = () => {
 
       // Criar o comentário na API
       const novoComentario: Partial<Comentario> = {
-        texto: comentarioTexto,
-        posicaoX,
-        posicaoY,
-        artigoId: artigo.id,
-        autorId: avaliadorId,
+          autor: artigo._id,
+          x: x,
+          y: y,
+          criadoEm: new Date(),
       };
 
       const response = await ComentarioService.create(novoComentario);
@@ -283,17 +284,20 @@ const ArtigoAlunoPage = () => {
             {/* PDF Viewer */}
             <div className="w-full h-full bg-gray-200">
               {/* Inserir visualizador de PDF aqui */}
-              <iframe
-                src={artigo.caminhoPDF}
-                className="w-full h-full"
-                title="Artigo PDF"
+              <WebViewer
+                pdfUrl={artigo.caminhoPDF}
               />
-
-              {/* Componente de comentários sobrepostos */}
-              <CommentViewer comentarios={comentarios} />
 
               {/* Botão para adicionar comentários */}
               <ButtonComent
+                role="avaliador"
+                initialComments={comentarios.map((comentario, index) => ({
+                  key: index,
+                  id: comentario.id ? Number(comentario.id) : index, // Convert id to number or use index as fallback
+                  x: comentario.posicaoX,
+                  y: comentario.posicaoY,
+                  text: comentario.texto,
+                }))}
                 onAddComment={adicionarComentario}
                 comentarioTexto={comentarioTexto}
                 onComentarioChange={handleComentarioChange}
