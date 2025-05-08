@@ -1,193 +1,191 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import ButtonComent from "@/components/buttonComent/ButtonComent";
-import WebViewer from "@/components/pdf-viewer/WebViewer";
-import { Comment } from "@/components/commentTool/CommentTool";
-import { FaSave } from "react-icons/fa";
+import { FaArrowLeft } from "react-icons/fa";
 import StarRating from "@/components/starRating/StarRating";
+import CommentViewer from "@/components/commentViewer/CommentViewer";
+import ButtonComent from "@/components/buttonComent/ButtonComent";
 import {
   ArtigoService,
   AvaliacaoService,
   ComentarioService,
+  Artigo,
+  Comentario,
 } from "@/services/api";
 
-interface Artigo {
-  id: string;
-  titulo: string;
-  autores: string[];
-  resumo: string;
-  status: string;
-  caminhoPDF: string;
-  eventoId: string;
-  nota?: number;
-}
-
-const Page = () => {
-  const [comments, setComments] = useState<Comment[]>([]);
-  const [isSaving, setIsSaving] = useState(false);
-  const [rating, setRating] = useState<number>(0);
-  const [artigo, setArtigo] = useState<Artigo | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
+const ArtigoAlunoPage = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const artigoId = searchParams.get("id");
+  const artigoId = searchParams.get("id") || "";
+
+  const [artigo, setArtigo] = useState<Artigo | null>(null);
+  const [comentarios, setComentarios] = useState<Comentario[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [avaliacao, setAvaliacao] = useState<number>(0);
+  const [comentarioTexto, setComentarioTexto] = useState<string>("");
+  const [submitting, setSubmitting] = useState(false);
+  const [sucessoSubmissao, setSucessoSubmissao] = useState(false);
+
+  // Voltar para a página anterior
+  const voltarParaArtigos = () => {
+    router.push("/private/avaliador/home");
+  };
 
   // Carregar dados do artigo e comentários
   useEffect(() => {
+    if (!artigoId) {
+      setError("ID do artigo não fornecido");
+      setLoading(false);
+      return;
+    }
+
     const carregarDados = async () => {
-      if (!artigoId) {
-        setError("ID do artigo não fornecido");
-        setIsLoading(false);
-        return;
-      }
+      setLoading(true);
+      setError(null);
 
       try {
-        // Buscar dados do artigo
-        const response = await fetch(
-          `http://localhost:5000/artigo/${artigoId}`
+        // Carregar o artigo
+        const artigoResponse = await ArtigoService.getById(artigoId);
+
+        if (!artigoResponse.success || !artigoResponse.data) {
+          throw new Error("Erro ao carregar o artigo");
+        }
+
+        setArtigo(artigoResponse.data);
+
+        // Carregar comentários do artigo
+        const comentariosResponse = await ComentarioService.getByArtigoId(
+          artigoId
         );
 
-        if (!response.ok) {
-          throw new Error(`Erro ao carregar artigo: ${response.status}`);
+        if (comentariosResponse.success && comentariosResponse.data) {
+          setComentarios(comentariosResponse.data);
         }
-
-        const artigoData = await response.json();
-        setArtigo(artigoData);
-
-        // Se houver uma nota já definida, usar como valor inicial
-        if (artigoData.nota) {
-          setRating(artigoData.nota);
-        }
-
-        // Buscar comentários do artigo
-        const comentariosResponse = await fetch(
-          `http://localhost:5000/comentario/artigo/${artigoId}`
-        );
-
-        if (!comentariosResponse.ok) {
-          throw new Error(
-            `Erro ao carregar comentários: ${comentariosResponse.status}`
-          );
-        }
-
-        const comentariosData = await comentariosResponse.json();
-
-        // Adaptar o formato dos comentários para o componente ButtonComent
-        const comentariosAdaptados = comentariosData.map((comentario: any) => ({
-          id: comentario.id,
-          text: comentario.texto,
-          x: comentario.posicaoX || 100,
-          y: comentario.posicaoY || 100,
-          timestamp: new Date(comentario.dataCriacao).toLocaleString("pt-BR"),
-          author: comentario.autor || "Avaliador",
-        }));
-
-        setComments(comentariosAdaptados);
-      } catch (err: any) {
-        console.error("Erro ao carregar dados:", err);
-        setError(err.message || "Erro ao carregar dados do artigo");
+      } catch (error: any) {
+        console.error("Erro ao carregar dados do artigo:", error);
+        setError(error.message || "Erro ao carregar dados do artigo");
       } finally {
-        setIsLoading(false);
+        setLoading(false);
       }
     };
 
     carregarDados();
   }, [artigoId]);
 
-  const back = () => {
-    router.push("/private/avaliador/artigos");
+  // Função para lidar com a mudança da nota
+  const handleRatingChange = (rating: number) => {
+    setAvaliacao(rating);
   };
 
-  // Função para lidar com as mudanças nos comentários
-  const handleCommentChange = (updatedComments: Comment[]) => {
-    setComments(updatedComments);
-    console.log("Comentários atualizados:", updatedComments);
+  // Função para lidar com a mudança do texto do comentário
+  const handleComentarioChange = (
+    event: React.ChangeEvent<HTMLTextAreaElement>
+  ) => {
+    setComentarioTexto(event.target.value);
   };
 
-  // Função para lidar com a mudança na avaliação por estrelas
-  const handleRatingChange = (newRating: number) => {
-    setRating(newRating);
-    console.log(`Nova avaliação: ${newRating} estrelas`);
-  };
-
-  // Função para salvar os comentários e avaliação
-  const handleSave = async () => {
-    if (!artigoId) {
-      alert("ID do artigo não disponível");
+  // Função para adicionar um novo comentário
+  const adicionarComentario = async (posicaoX: number, posicaoY: number) => {
+    if (!comentarioTexto.trim()) {
+      alert("Por favor, digite um comentário");
       return;
     }
 
-    setIsSaving(true);
+    if (!artigo) {
+      return;
+    }
 
     try {
-      // 1. Salvar avaliação (nota)
-      const avaliacaoData = {
-        artigoId,
-        nota: rating,
-        avaliadorId: localStorage.getItem("userId") || "1", // Idealmente, pegar o ID do usuário logado
+      setSubmitting(true);
+
+      // Obter ID do usuário avaliador do localStorage ou estado global
+      const avaliadorId = localStorage.getItem("userId") || "";
+
+      if (!avaliadorId) {
+        throw new Error("Usuário não identificado");
+      }
+
+      // Criar o comentário na API
+      const novoComentario: Partial<Comentario> = {
+        texto: comentarioTexto,
+        posicaoX,
+        posicaoY,
+        artigoId: artigo.id,
+        autorId: avaliadorId,
       };
 
-      const avaliacaoResponse = await AvaliacaoService.create(avaliacaoData);
+      const response = await ComentarioService.create(novoComentario);
 
-      if (!avaliacaoResponse.success) {
-        throw new Error(`Erro ao salvar avaliação: ${avaliacaoResponse.error}`);
+      if (!response.success || !response.data) {
+        throw new Error(response.error || "Erro ao criar comentário");
       }
 
-      // 2. Salvar comentários - para cada comentário novo (sem ID)
-      const comentariosParaSalvar = comments.filter(
-        (c) => !c.id || (typeof c.id === "string" && c.id.startsWith("temp_"))
-      );
-
-      for (const comentario of comentariosParaSalvar) {
-        const comentarioData = {
-          artigoId,
-          texto: comentario.text,
-          posicaoX: comentario.x,
-          posicaoY: comentario.y,
-          autorId: localStorage.getItem("userId") || "1", // Idealmente, pegar o ID do usuário logado
-        };
-
-        await ComentarioService.create(comentarioData);
-      }
-
-      // 3. Atualizar comentários editados
-      const comentariosParaAtualizar = comments.filter(
-        (c) => c.id && !String(c.id).startsWith("temp_") && c.isEdited
-      );
-
-      for (const comentario of comentariosParaAtualizar) {
-        const comentarioData = {
-          id: comentario.id,
-          texto: comentario.text,
-          posicaoX: comentario.x,
-          posicaoY: comentario.y,
-        };
-
-        await ComentarioService.update(comentarioData);
-      }
-
-      alert("Avaliação e comentários salvos com sucesso!");
-
-      // Redireciona para a página de artigos
-      router.push("/private/avaliador/artigos");
-    } catch (err: any) {
-      console.error("Erro ao salvar dados:", err);
-      alert(`Erro ao salvar: ${err.message || "Erro desconhecido"}`);
+      // Adicionar o comentário à lista local
+      setComentarios([...comentarios, response.data]);
+      setComentarioTexto("");
+    } catch (error: any) {
+      console.error("Erro ao adicionar comentário:", error);
+      alert(`Erro ao adicionar comentário: ${error.message}`);
     } finally {
-      setIsSaving(false);
+      setSubmitting(false);
     }
   };
 
-  // Usar a URL do PDF da variável de ambiente ou do artigo
-  const url =
-    artigo?.caminhoPDF || process.env.NEXT_PUBLIC_PDF_URL || "/pdf/ACEx_5.pdf";
+  // Função para enviar avaliação final
+  const enviarAvaliacao = async () => {
+    if (avaliacao === 0) {
+      alert("Por favor, selecione uma nota para a avaliação");
+      return;
+    }
 
-  if (isLoading) {
+    if (!artigo) {
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+
+      // Obter ID do usuário avaliador do localStorage ou estado global
+      const avaliadorId = localStorage.getItem("userId") || "";
+
+      if (!avaliadorId) {
+        throw new Error("Usuário não identificado");
+      }
+
+      // Criar a avaliação na API
+      const avaliacaoObj = {
+        artigoId: artigo.id,
+        nota: avaliacao,
+        avaliadorId,
+        comentarios: `Total de ${comentarios.length} comentários`,
+        isFinal: true,
+      };
+
+      const response = await AvaliacaoService.create(avaliacaoObj);
+
+      if (!response.success) {
+        throw new Error(response.error || "Erro ao enviar avaliação");
+      }
+
+      setSucessoSubmissao(true);
+
+      // Redirecionar após um breve período
+      setTimeout(() => {
+        voltarParaArtigos();
+      }, 3000);
+    } catch (error: any) {
+      console.error("Erro ao enviar avaliação:", error);
+      alert(`Erro ao enviar avaliação: ${error.message}`);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Renderização condicional baseada no estado
+  if (loading) {
     return (
-      <div className="w-full h-screen flex items-center justify-center bg-gray-100">
+      <div className="flex justify-center items-center h-screen bg-gray-50">
         <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-[#304358]"></div>
       </div>
     );
@@ -195,104 +193,159 @@ const Page = () => {
 
   if (error || !artigo) {
     return (
-      <div className="w-full h-screen flex items-center justify-center bg-gray-100">
-        <div className="bg-white p-8 rounded-xl shadow-lg max-w-md text-center">
-          <div className="text-red-500 text-5xl mb-4">❗</div>
-          <h2 className="text-2xl font-bold text-gray-800 mb-4">
-            {error || "Artigo não encontrado"}
-          </h2>
-          <p className="text-gray-600 mb-6">
-            Ocorreu um erro ao carregar as informações do artigo.
+      <div className="bg-white min-h-screen flex flex-col p-8">
+        <div className="bg-red-50 p-6 rounded-lg border border-red-100 text-center mb-8">
+          <h2 className="text-xl font-bold text-red-700 mb-2">Erro</h2>
+          <p className="text-red-600">
+            {error || "Não foi possível carregar o artigo"}
           </p>
           <button
-            onClick={back}
-            className="px-6 py-2 bg-[#304358] text-white font-medium rounded-lg hover:bg-opacity-90 transition-colors"
+            onClick={voltarParaArtigos}
+            className="mt-4 px-6 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition duration-200 flex items-center mx-auto"
           >
-            Voltar para artigos
+            <FaArrowLeft className="mr-2" /> Voltar
           </button>
         </div>
       </div>
     );
   }
 
-  return (
-    <div className="w-full">
-      <div className="h-12 bg-[#304358]">
-        <button
-          className="px-4 py-2 bg-[#304358] h-fit w-fit text-white font-semibold hover:cursor-pointer rounded-lg"
-          onClick={back}
-        >
-          Voltar
-        </button>
+  if (sucessoSubmissao) {
+    return (
+      <div className="bg-white min-h-screen flex flex-col items-center justify-center p-8">
+        <div className="bg-green-50 p-8 rounded-lg border border-green-100 text-center max-w-md">
+          <div className="bg-green-100 rounded-full p-4 w-20 h-20 flex items-center justify-center mx-auto mb-4">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-10 w-10 text-green-600"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M5 13l4 4L19 7"
+              />
+            </svg>
+          </div>
+          <h2 className="text-2xl font-bold text-green-800 mb-4">
+            Avaliação enviada com sucesso!
+          </h2>
+          <p className="text-green-700 mb-6">
+            Sua avaliação foi registrada. Você será redirecionado em
+            instantes...
+          </p>
+        </div>
       </div>
-      <div className="flex justify-between bg-gray-200 min-h-screen">
-        <div className=""></div>
-        <div className="flex flex-col h-full">
-          <div className="bg-white min-h-screen w-fit p-10">
-            <div className="flex flex-col gap-6">
-              <div className="w-20 h-20 rounded-full bg-gray-200 flex items-center justify-center">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-10 w-10 text-gray-500"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                  />
-                </svg>
-              </div>
-              <h1 className="font-bold text-xl text-[#304358]">
-                {artigo.titulo}
-              </h1>
-              <h1 className="font-semibold text-gray-800">
-                {artigo.autores?.join(", ") || "Autor desconhecido"}
-              </h1>
-              <div className="font-semibold text-gray-800">
-                <div className="flex flex-col gap-2">
-                  <span>Avaliação:</span>
-                  <StarRating
-                    initialRating={rating}
-                    onChange={handleRatingChange}
-                    size="lg"
-                  />
-                </div>
-              </div>
-              {artigo.resumo && (
-                <div className="mt-4">
-                  <h3 className="font-semibold text-gray-800 mb-2">Resumo:</h3>
-                  <p className="text-gray-700">{artigo.resumo}</p>
-                </div>
-              )}
-            </div>
+    );
+  }
+
+  return (
+    <div className="bg-gray-50 min-h-screen flex flex-col">
+      {/* Header */}
+      <header className="bg-[#304358] text-white py-4 shadow-md">
+        <div className="container mx-auto px-4 flex justify-between items-center">
+          <div className="flex items-center">
+            <button
+              onClick={voltarParaArtigos}
+              className="mr-4 p-2 rounded-full hover:bg-blue-600 transition-colors"
+            >
+              <FaArrowLeft />
+            </button>
+            <h1 className="text-xl font-bold">Avaliação de Artigo</h1>
           </div>
         </div>
-        <div className="w-[30%] h-full">
-          <ButtonComent
-            role="avaliador"
-            initialComments={comments}
-            onCommentChange={handleCommentChange}
-          />
-          <WebViewer pdfUrl={url} />
-        </div>
-        <div className="bg-white w-[30%] min-h-screen"></div>
-      </div>
+      </header>
 
-      {/* Botão de salvar fixado no canto inferior direito */}
-      <button
-        onClick={handleSave}
-        disabled={isSaving}
-        className="fixed bottom-8 right-8 flex items-center justify-center gap-2 bg-[#304358] hover:bg-[#1e2e3d] text-white font-semibold py-3 px-6 rounded-lg shadow-lg transition-all duration-200 z-50"
-      >
-        <FaSave className={`${isSaving ? "animate-pulse" : ""}`} />
-        {isSaving ? "Salvando..." : "Salvar comentários"}
-      </button>
+      {/* Main Content */}
+      <main className="container mx-auto px-4 py-6 flex-grow">
+        <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+          {/* Informações do Artigo */}
+          <div className="p-6 border-b border-gray-200">
+            <h2 className="text-2xl font-bold text-[#304358] mb-1">
+              {artigo.titulo}
+            </h2>
+            <p className="text-gray-600 mb-4">
+              Autores: {artigo.autores?.join(", ")}
+            </p>
+            <div className="bg-blue-50 p-4 rounded-md">
+              <h3 className="text-lg font-medium text-[#304358] mb-2">
+                Resumo
+              </h3>
+              <p className="text-gray-700">{artigo.resumo}</p>
+            </div>
+          </div>
+
+          {/* Visualizador de PDF com comentários */}
+          <div className="relative" style={{ height: "600px" }}>
+            {/* PDF Viewer */}
+            <div className="w-full h-full bg-gray-200">
+              {/* Inserir visualizador de PDF aqui */}
+              <iframe
+                src={artigo.caminhoPDF}
+                className="w-full h-full"
+                title="Artigo PDF"
+              />
+
+              {/* Componente de comentários sobrepostos */}
+              <CommentViewer comentarios={comentarios} />
+
+              {/* Botão para adicionar comentários */}
+              <ButtonComent
+                onAddComment={adicionarComentario}
+                comentarioTexto={comentarioTexto}
+                onComentarioChange={handleComentarioChange}
+                disabled={submitting}
+              />
+            </div>
+          </div>
+
+          {/* Seção de avaliação */}
+          <div className="p-6 bg-gray-50">
+            <h3 className="text-xl font-bold text-[#304358] mb-4">Avaliação</h3>
+
+            <div className="mb-6">
+              <p className="text-gray-700 mb-2">Nota geral para este artigo:</p>
+              <StarRating
+                totalStars={5}
+                initialRating={avaliacao}
+                onRatingChange={handleRatingChange}
+              />
+              <p className="text-sm text-gray-500 mt-1">
+                Selecione de 1 a 5 estrelas
+              </p>
+            </div>
+
+            <button
+              onClick={enviarAvaliacao}
+              disabled={submitting}
+              className={`px-6 py-3 bg-[#304358] text-white rounded-md hover:bg-blue-700 transition duration-200 flex items-center justify-center ${
+                submitting ? "opacity-50 cursor-not-allowed" : ""
+              }`}
+            >
+              {submitting ? (
+                <>
+                  <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full mr-2"></div>
+                  <span>Enviando...</span>
+                </>
+              ) : (
+                "Enviar Avaliação Final"
+              )}
+            </button>
+          </div>
+        </div>
+      </main>
+
+      {/* Footer */}
+      <footer className="bg-[#304358] text-white py-3 mt-8">
+        <div className="container mx-auto px-4 text-center">
+          <p>© 2025 BugWave - Sistema de Gestão Acadêmica</p>
+        </div>
+      </footer>
     </div>
   );
 };
 
-export default Page;
+export default ArtigoAlunoPage;

@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { EventoService } from "@/services/api";
 
 interface EventItem {
   id: string;
@@ -49,12 +50,26 @@ const GestaoEventosPage = () => {
     const carregarEventos = async () => {
       try {
         // Em um ambiente real, usaríamos o serviço para buscar os dados
-        const response = await fetch("/api/eventos");
-        const data = await response.json();
-        setEventos(data);
+        // const response = await EventoService.getAtivos();
+        const response = await EventoService.getAtivos();
+
+        setEventos(
+          (response.data ?? []).map((evento: any, index) => ({
+            key: index,
+            id: evento._id,
+            titulo: evento.titulo,
+            descricao: evento.descricao,
+            dataInicio: new Date(evento.dataInicio),
+            dataFim: new Date(evento.dataFim),
+            artigos: evento.artigos || [],
+            avaliadores: evento.avaliadores || [],
+            criadoPor: evento.criadoPor,
+          }))
+        );
       } catch (error) {
         console.error("Erro ao carregar eventos:", error);
         // Fallback para dados mockados em caso de erro
+
         setEventos([
           {
             id: "1",
@@ -232,6 +247,8 @@ const GestaoEventosPage = () => {
 
   // Função para visualizar artigos de um evento
   const visualizarArtigos = (eventoId: string) => {
+    console.log(`Visualizando artigos do evento ${eventoId}`);
+
     router.push(`/private/coordenador/artigos?eventoId=${eventoId}`);
   };
 
@@ -323,9 +340,9 @@ const GestaoEventosPage = () => {
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 p-4">
-                {eventos.map((evento) => (
+                {eventos.map((evento, index) => (
                   <div
-                    key={evento.id}
+                    key={index}
                     className="group bg-white border border-gray-100 rounded-xl shadow-md hover:shadow-xl p-6 transition-all duration-200 hover:-translate-y-1"
                   >
                     <div className="mb-4 bg-gradient-to-r from-blue-500 to-indigo-600 h-36 rounded-lg flex items-center justify-center overflow-hidden">

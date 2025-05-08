@@ -1,24 +1,13 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { EventoService, ArtigoService, Evento, Artigo } from "@/services/api";
 
-interface EventItem {
-  id: string;
-  titulo: string;
-  descricao: string;
-  dataInicio: Date;
-  dataFim: Date;
+interface EventItem extends Evento {
   artigos: string[];
 }
 
-interface ArtigoItem {
-  id: string;
-  titulo: string;
-  autores: string[];
-  resumo: string;
-  status: string;
-  caminhoPDF: string;
-}
+interface ArtigoItem extends Artigo {}
 
 const AvaliadoresHomePage = () => {
   const router = useRouter();
@@ -28,9 +17,10 @@ const AvaliadoresHomePage = () => {
     null
   );
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Função para formatar data
-  const formatarData = (data: Date) => {
+  const formatarData = (data: string) => {
     if (!data) return "";
     const date = new Date(data);
     return date.toLocaleDateString("pt-BR");
@@ -39,44 +29,21 @@ const AvaliadoresHomePage = () => {
   // Carregar dados dos eventos
   useEffect(() => {
     const carregarEventos = async () => {
+      setLoading(true);
+      setError(null);
+
       try {
-        // Em um ambiente real, usaríamos o serviço para buscar os dados
-        // Substituindo o mock por uma chamada real ao EventoService
-        const response = await fetch("/api/eventos/avaliador");
-        const data = await response.json();
-        setEventos(data);
-      } catch (error) {
+        // Usa o serviço de API para buscar eventos ativos
+        const response = await EventoService.getAtivos();
+
+        if (!response.success) {
+          throw new Error(response.error || "Erro ao carregar eventos");
+        }
+
+        setEventos(response.data || []);
+      } catch (error: any) {
         console.error("Erro ao carregar eventos para avaliação:", error);
-        // Fallback para dados mockados em caso de erro
-        setEventos([
-          {
-            id: "1",
-            titulo: "Conferência Nacional de Tecnologia 2025",
-            descricao:
-              "Evento anual que reúne pesquisadores e profissionais da área de tecnologia.",
-            dataInicio: new Date("2025-07-15"),
-            dataFim: new Date("2025-07-20"),
-            artigos: ["1", "2", "3"],
-          },
-          {
-            id: "2",
-            titulo: "Simpósio de Sustentabilidade e Meio Ambiente",
-            descricao:
-              "Encontro para debater os avanços e desafios na área de sustentabilidade.",
-            dataInicio: new Date("2025-09-05"),
-            dataFim: new Date("2025-09-07"),
-            artigos: ["4", "5"],
-          },
-          {
-            id: "3",
-            titulo: "Workshop de Engenharia de Software",
-            descricao:
-              "Workshop prático sobre boas práticas e tendências em engenharia de software.",
-            dataInicio: new Date("2025-11-10"),
-            dataFim: new Date("2025-11-12"),
-            artigos: ["6", "7", "8"],
-          },
-        ]);
+        setError(error.message || "Ocorreu um erro ao carregar os eventos");
       } finally {
         setLoading(false);
       }
@@ -94,56 +61,37 @@ const AvaliadoresHomePage = () => {
   const buscarArtigosPorEvento = async (evento: EventItem) => {
     setLoading(true);
     setEventoSelecionado(evento);
+    setError(null);
 
     try {
-      // Em um ambiente real, usaríamos o serviço para buscar os dados
-      const response = await fetch(
-        `/api/eventos/artigos-para-avaliacao/${evento.id}`
+      // Aqui estamos recuperando todos os artigos associados ao evento
+      // Na prática, deveria haver um endpoint específico para listar artigos por evento para avaliação
+      // Isso teria que ser implementado no backend
+
+      if (!evento.artigos || evento.artigos.length === 0) {
+        setArtigosPorEvento([]);
+        return;
+      }
+
+      // Recuperando cada artigo individualmente
+      const artigosPromises = evento.artigos.map((id) =>
+        ArtigoService.getById(id)
       );
-      const data = await response.json();
-      setArtigosPorEvento(data);
-    } catch (error) {
+      const resultados = await Promise.all(artigosPromises);
+
+      // Filtra apenas os resultados bem sucedidos e mapeia para seus dados
+      const artigosFiltrados = resultados
+        .filter((res) => res.success && res.data)
+        .map((res) => res.data as ArtigoItem)
+        // Filtra apenas artigos que estejam com status para avaliação
+        .filter((artigo) =>
+          ["PARA_AVALIAR", "EM_AVALIACAO"].includes(artigo.status)
+        );
+
+      setArtigosPorEvento(artigosFiltrados);
+    } catch (error: any) {
       console.error("Erro ao carregar artigos para avaliação:", error);
-      // Fallback para dados mockados em caso de erro
-      setArtigosPorEvento(
-        [
-          {
-            id: "1",
-            titulo: "Inteligência Artificial na Medicina",
-            autores: ["Maria Silva", "João Oliveira"],
-            resumo: "Este artigo discute o impacto da IA na medicina moderna.",
-            status: "PARA_AVALIAR",
-            caminhoPDF: "/uploads/artigos/artigo1.pdf",
-          },
-          {
-            id: "2",
-            titulo: "Energias Renováveis no Brasil",
-            autores: ["Pedro Santos", "Ana Ferreira"],
-            resumo:
-              "Uma análise sobre o panorama das energias renováveis no Brasil.",
-            status: "EM_AVALIACAO",
-            caminhoPDF: "/uploads/artigos/artigo2.pdf",
-          },
-          {
-            id: "3",
-            titulo: "Big Data e Aprendizado de Máquina",
-            autores: ["Carlos Mendes", "Lúcia Faria"],
-            resumo:
-              "Análise das aplicações de Big Data combinado com técnicas de Machine Learning.",
-            status: "PARA_AVALIAR",
-            caminhoPDF: "/uploads/artigos/artigo3.pdf",
-          },
-          {
-            id: "4",
-            titulo: "Impacto da Agricultura Digital",
-            autores: ["Roberto Lima", "Fernanda Costa"],
-            resumo:
-              "Estudo sobre como a tecnologia está transformando a agricultura tradicional.",
-            status: "AVALIADO",
-            caminhoPDF: "/uploads/artigos/artigo4.pdf",
-          },
-        ].filter((artigo) => evento.artigos.includes(artigo.id))
-      );
+      setError(error.message || "Erro ao buscar artigos para avaliação");
     } finally {
       setLoading(false);
     }
@@ -196,6 +144,37 @@ const AvaliadoresHomePage = () => {
         {loading ? (
           <div className="flex justify-center items-center h-64">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+          </div>
+        ) : error ? (
+          <div className="bg-white rounded-xl shadow-lg p-6">
+            <div className="text-center py-8">
+              <div className="bg-red-100 p-4 rounded-full w-20 h-20 mx-auto mb-4 flex items-center justify-center">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-10 w-10 text-red-500"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+              </div>
+              <h2 className="text-xl font-bold text-gray-800 mb-2">
+                Erro ao carregar dados
+              </h2>
+              <p className="text-gray-600 mb-6">{error}</p>
+              <button
+                className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-200"
+                onClick={() => window.location.reload()}
+              >
+                Tentar novamente
+              </button>
+            </div>
           </div>
         ) : eventoSelecionado ? (
           // Visualização de artigos do evento selecionado para avaliação
@@ -274,7 +253,7 @@ const AvaliadoresHomePage = () => {
                           {artigo.titulo}
                         </h4>
                         <p className="text-sm text-gray-600 mb-2">
-                          {artigo.autores.join(", ")}
+                          {artigo.autores?.join(", ")}
                         </p>
                         <p className="text-gray-700 text-sm line-clamp-2">
                           {artigo.resumo}
@@ -315,40 +294,41 @@ const AvaliadoresHomePage = () => {
               </h2>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 p-4">
-              {eventos.map((evento) => (
-                <div
-                  key={evento.id}
-                  onClick={() => buscarArtigosPorEvento(evento)}
-                  className="group bg-white border border-gray-100 rounded-xl shadow-md hover:shadow-xl p-6 cursor-pointer transition-all duration-200 hover:-translate-y-1"
+            {eventos.length === 0 ? (
+              <div className="text-center py-12 bg-gray-50 rounded-lg">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-16 w-16 text-gray-400 mx-auto mb-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
                 >
-                  <div className="mb-4 bg-gradient-to-r from-blue-500 to-indigo-600 h-36 rounded-lg flex items-center justify-center overflow-hidden">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-16 w-16 text-white opacity-80"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={1.5}
-                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                      />
-                    </svg>
-                  </div>
-                  <h3 className="font-bold text-xl mb-2 text-gray-800 group-hover:text-blue-600 transition-colors">
-                    {evento.titulo}
-                  </h3>
-                  <p className="text-gray-600 mb-3 line-clamp-2">
-                    {evento.descricao}
-                  </p>
-                  <div className="text-sm text-gray-500">
-                    <div className="flex items-center mb-1">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"
+                  />
+                </svg>
+                <h3 className="text-xl font-semibold text-gray-800 mb-2">
+                  Nenhum evento disponível
+                </h3>
+                <p className="text-gray-600">
+                  No momento não há eventos disponíveis para avaliação.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 p-4">
+                {eventos.map((evento) => (
+                  <div
+                    key={evento.id}
+                    onClick={() => buscarArtigosPorEvento(evento)}
+                    className="group bg-white border border-gray-100 rounded-xl shadow-md hover:shadow-xl p-6 cursor-pointer transition-all duration-200 hover:-translate-y-1"
+                  >
+                    <div className="mb-4 bg-gradient-to-r from-blue-500 to-indigo-600 h-36 rounded-lg flex items-center justify-center overflow-hidden">
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
-                        className="h-4 w-4 mr-2"
+                        className="h-16 w-16 text-white opacity-80"
                         fill="none"
                         viewBox="0 0 24 24"
                         stroke="currentColor"
@@ -356,57 +336,81 @@ const AvaliadoresHomePage = () => {
                         <path
                           strokeLinecap="round"
                           strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                          strokeWidth={1.5}
+                          d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
                         />
                       </svg>
-                      <span>
-                        {formatarData(evento.dataInicio)} -{" "}
-                        {formatarData(evento.dataFim)}
-                      </span>
                     </div>
-                    <div className="flex items-center">
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-4 w-4 mr-2"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                        />
-                      </svg>
-                      <span>
-                        {evento.artigos?.length || 0} artigos para avaliar
-                      </span>
+                    <h3 className="font-bold text-xl mb-2 text-gray-800 group-hover:text-blue-600 transition-colors">
+                      {evento.titulo}
+                    </h3>
+                    <p className="text-gray-600 mb-3 line-clamp-2">
+                      {evento.descricao}
+                    </p>
+                    <div className="text-sm text-gray-500">
+                      <div className="flex items-center mb-1">
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-4 w-4 mr-2"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                          />
+                        </svg>
+                        <span>
+                          {formatarData(evento.dataInicio)} -{" "}
+                          {formatarData(evento.dataFim)}
+                        </span>
+                      </div>
+                      <div className="flex items-center">
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-4 w-4 mr-2"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                          />
+                        </svg>
+                        <span>
+                          {evento.artigos?.length || 0} artigos para avaliar
+                        </span>
+                      </div>
+                    </div>
+                    <div className="mt-4 pt-3 border-t border-gray-100">
+                      <button className="text-blue-600 hover:text-blue-800 font-medium flex items-center group">
+                        <span>Ver artigos para avaliação</span>
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-4 w-4 ml-1 group-hover:translate-x-1 transition-transform"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M9 5l7 7-7 7"
+                          />
+                        </svg>
+                      </button>
                     </div>
                   </div>
-                  <div className="mt-4 pt-3 border-t border-gray-100">
-                    <button className="text-blue-600 hover:text-blue-800 font-medium flex items-center group">
-                      <span>Ver artigos para avaliação</span>
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-4 w-4 ml-1 group-hover:translate-x-1 transition-transform"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M9 5l7 7-7 7"
-                        />
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </main>

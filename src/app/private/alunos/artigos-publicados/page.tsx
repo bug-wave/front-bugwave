@@ -11,21 +11,12 @@ import {
   FaExclamationTriangle,
 } from "react-icons/fa";
 import { useRouter } from "next/navigation";
-
-// Tipo para representar um artigo
-type Artigo = {
-  id: string;
-  titulo: string;
-  status: string;
-  dataEnvio: string;
-  totalComentarios: number;
-  caminhoPDF: string;
-};
+import { ArtigoService, Artigo } from "@/services/api";
 
 const AlunosPage = () => {
   const [artigos, setArtigos] = useState<Artigo[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
   const back = () => {
@@ -37,39 +28,35 @@ const AlunosPage = () => {
   };
 
   useEffect(() => {
-    // Em uma aplicação real, você buscaria os dados dos artigos da API
-    // Aqui estamos simulando com dados mocados
-    setTimeout(() => {
-      const artigosMockados: Artigo[] = [
-        {
-          id: "1",
-          titulo: "Inteligência Artificial na Medicina",
-          status: "EM_AVALIACAO",
-          dataEnvio: "15/04/2025",
-          totalComentarios: 3,
-          caminhoPDF: "/pdf/ACEx_5.pdf",
-        },
-        {
-          id: "2",
-          titulo: "Energias Renováveis no Brasil",
-          status: "APROVADO",
-          dataEnvio: "10/03/2025",
-          totalComentarios: 2,
-          caminhoPDF: "/pdf/ACEx_5.pdf",
-        },
-        {
-          id: "3",
-          titulo: "Arquitetura de Software: Microserviços vs Monolítico",
-          status: "REVISAO_SOLICITADA",
-          dataEnvio: "01/05/2025",
-          totalComentarios: 5,
-          caminhoPDF: "/pdf/ACEx_5.pdf",
-        },
-      ];
+    const carregarArtigos = async () => {
+      try {
+        setIsLoading(true);
 
-      setArtigos(artigosMockados);
-      setIsLoading(false);
-    }, 1000);
+        // Obtém o ID do usuário do localStorage ou alguma forma de estado global
+        const idUsuario = localStorage.getItem("userId") || "";
+
+        if (!idUsuario) {
+          throw new Error("Usuário não identificado");
+        }
+
+        // Busca os artigos do usuário da API real
+        const response = await ArtigoService.getByAutor(idUsuario);
+        console.log(response);
+
+        if (!response.success) {
+          throw new Error(response.error || "Erro ao carregar artigos");
+        }
+
+        setArtigos(response.data || []);
+      } catch (error: any) {
+        console.error("Erro ao carregar artigos:", error);
+        setError(error.message || "Ocorreu um erro ao carregar os artigos");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    carregarArtigos();
   }, []);
 
   // Função para obter informações de status
