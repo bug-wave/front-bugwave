@@ -6,6 +6,11 @@ import WebViewer from "@/components/pdf-viewer/WebViewer";
 import { Comment } from "@/components/commentTool/CommentTool";
 import { FaSave, FaFilePdf, FaUser, FaStar, FaTags } from "react-icons/fa";
 import StarRating from "@/components/starRating/StarRating";
+import {
+  ArtigoService,
+  AvaliacaoService,
+  ComentarioService,
+} from "@/services/api";
 
 // Interface para o artigo completo com detalhes
 interface ArtigoDetalhado {
@@ -17,8 +22,8 @@ interface ArtigoDetalhado {
   caminhoPDF: string;
   eventoId: string;
   dataEnvio: string;
-  totalComentarios: number;
-  palavrasChave: string[];
+  totalComentarios?: number;
+  palavrasChave?: string[];
   nota?: number;
 }
 
@@ -28,6 +33,7 @@ const ArtigoDetalhesPage = () => {
   const [loading, setLoading] = useState(true);
   const [artigo, setArtigo] = useState<ArtigoDetalhado | null>(null);
   const [rating, setRating] = useState<number>(0);
+  const [error, setError] = useState<string | null>(null);
 
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -38,78 +44,67 @@ const ArtigoDetalhesPage = () => {
     router.back();
   };
 
-  // Carregar dados do artigo
+  // Carregar dados do artigo e comentários
   useEffect(() => {
-    const carregarArtigo = async () => {
+    const carregarDados = async () => {
       if (!artigoId) {
-        router.push("/private/coordenador/evento");
+        setError("ID do artigo não fornecido");
+        setLoading(false);
         return;
       }
 
       try {
-        // Em um ambiente real, buscaríamos os dados do artigo da API
-        const response = await fetch(`/api/artigos/${artigoId}`);
-        const data = await response.json();
-        setArtigo(data);
-
-        // Carregar comentários existentes
-        const commentsResponse = await fetch(
-          `/api/artigos/${artigoId}/comentarios`
+        // Buscar dados do artigo
+        const response = await fetch(
+          `http://localhost:5000/artigo/${artigoId}`
         );
-        const commentsData = await commentsResponse.json();
-        setComments(commentsData);
-      } catch (error) {
-        console.error("Erro ao carregar artigo:", error);
 
-        // Dados mockados para visualização
-        setArtigo({
-          id: artigoId || "1",
-          titulo:
-            "Inteligência Artificial na Medicina: Aplicações e Desafios Éticos",
-          autores: ["Maria Silva", "João Oliveira"],
-          resumo:
-            "Este artigo discute o impacto da IA na medicina moderna, abordando tanto os avanços tecnológicos quanto as questões éticas envolvidas.",
-          status: "EM_AVALIACAO",
-          caminhoPDF: process.env.NEXT_PUBLIC_PDF_URL || "/pdf/ACEx_5.pdf", // Usando variável de ambiente
-          eventoId: "1",
-          dataEnvio: "15/04/2025",
-          totalComentarios: 7,
-          palavrasChave: [
-            "Inteligência Artificial",
-            "Medicina",
-            "Ética",
-            "Tecnologia",
-          ],
-          nota: 8.5,
-        });
+        if (!response.ok) {
+          throw new Error(`Erro ao carregar artigo: ${response.status}`);
+        }
 
-        // Comentários mockados
-        const mockComments = [
-          {
-            id: 1,
-            x: 150,
-            y: 200,
-            text: "A metodologia utilizada precisa ser mais detalhada na seção 3.",
-            author: "Dr. Carlos Mendes",
-            timestamp: "01/05/2025 14:30",
-          },
-          {
-            id: 2,
-            x: 200,
-            y: 350,
-            text: "Excelente análise dos impactos éticos da tecnologia.",
-            author: "Profa. Ana Souza",
-            timestamp: "03/05/2025 09:15",
-          },
-        ];
-        setComments(mockComments);
+        const artigoData = await response.json();
+        setArtigo(artigoData);
+
+        // Se houver uma nota já definida, usar como valor inicial
+        if (artigoData.nota) {
+          setRating(artigoData.nota);
+        }
+
+        // Buscar comentários do artigo
+        const comentariosResponse = await fetch(
+          `http://localhost:5000/comentario/artigo/${artigoId}`
+        );
+
+        if (!comentariosResponse.ok) {
+          throw new Error(
+            `Erro ao carregar comentários: ${comentariosResponse.status}`
+          );
+        }
+
+        const comentariosData = await comentariosResponse.json();
+
+        // Adaptar o formato dos comentários para o componente ButtonComent
+        const comentariosAdaptados = comentariosData.map((comentario: any) => ({
+          id: comentario.id,
+          text: comentario.texto,
+          x: comentario.posicaoX || 100,
+          y: comentario.posicaoY || 100,
+          timestamp: new Date(comentario.dataCriacao).toLocaleString("pt-BR"),
+          author: comentario.autor || "Avaliador",
+        }));
+
+        setComments(comentariosAdaptados);
+      } catch (err: any) {
+        console.error("Erro ao carregar dados:", err);
+        setError(err.message || "Erro ao carregar dados do artigo");
       } finally {
         setLoading(false);
       }
     };
 
-    carregarArtigo();
-  }, [artigoId, router]);
+    carregarDados();
+  }, [artigoId]);
 
   // Função para lidar com as mudanças nos comentários
   const handleCommentChange = (updatedComments: Comment[]) => {
@@ -123,27 +118,71 @@ const ArtigoDetalhesPage = () => {
     console.log(`Nova avaliação: ${newRating} estrelas`);
   };
 
-  // Função para salvar os comentários
+  // Função para salvar os comentários e avaliação
   const handleSave = async () => {
+    if (!artigoId) {
+      alert("ID do artigo não disponível");
+      return;
+    }
+
     setIsSaving(true);
 
     try {
-      // Em um ambiente real, faríamos uma chamada à API
-      // await fetch(`/api/artigos/${artigoId}/comentarios`, {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ comments, rating })
-      // });
+      // 1. Salvar avaliação final (nota) como coordenador
+      const avaliacaoData = {
+        artigoId,
+        nota: rating,
+        avaliadorId: localStorage.getItem("userId") || "1", // Idealmente, pegar o ID do usuário logado
+        isFinal: true, // Indicar que é a avaliação final do coordenador
+      };
 
-      // Simulação de chamada de API
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      const avaliacaoResponse = await AvaliacaoService.create(avaliacaoData);
 
-      console.log("Comentários salvos:", comments);
-      console.log("Avaliação salva:", rating);
-      alert("Comentários e avaliação salvos com sucesso!");
-    } catch (error) {
-      console.error("Erro ao salvar:", error);
-      alert("Erro ao salvar. Por favor, tente novamente.");
+      if (!avaliacaoResponse.success) {
+        throw new Error(`Erro ao salvar avaliação: ${avaliacaoResponse.error}`);
+      }
+
+      // 2. Salvar comentários novos
+      const comentariosParaSalvar = comments.filter(
+        (c) => !c.id || (typeof c.id === "string" && c.id.startsWith("temp_"))
+      );
+
+      for (const comentario of comentariosParaSalvar) {
+        const comentarioData = {
+          artigoId,
+          texto: comentario.text,
+          posicaoX: comentario.x,
+          posicaoY: comentario.y,
+          autorId: localStorage.getItem("userId") || "1", // Idealmente, pegar o ID do usuário logado
+          tipo: "COORDENADOR", // Indicar que é um comentário de coordenador
+        };
+
+        await ComentarioService.create(comentarioData);
+      }
+
+      // 3. Atualizar comentários editados
+      const comentariosParaAtualizar = comments.filter(
+        (c) => c.id && !String(c.id).startsWith("temp_") && c.isEdited
+      );
+
+      for (const comentario of comentariosParaAtualizar) {
+        const comentarioData = {
+          id: comentario.id,
+          texto: comentario.text,
+          posicaoX: comentario.x,
+          posicaoY: comentario.y,
+        };
+
+        await ComentarioService.update(comentarioData);
+      }
+
+      // 4. Atualizar o status do artigo, se necessário
+      // Implementar conforme necessário
+
+      alert("Avaliação e comentários salvos com sucesso!");
+    } catch (err: any) {
+      console.error("Erro ao salvar dados:", err);
+      alert(`Erro ao salvar: ${err.message || "Erro desconhecido"}`);
     } finally {
       setIsSaving(false);
     }
@@ -157,13 +196,13 @@ const ArtigoDetalhesPage = () => {
     );
   }
 
-  if (!artigo) {
+  if (error || !artigo) {
     return (
       <div className="w-full h-screen flex items-center justify-center bg-gray-100">
         <div className="bg-white p-8 rounded-xl shadow-lg max-w-md text-center">
           <div className="text-red-500 text-5xl mb-4">❗</div>
           <h2 className="text-2xl font-bold text-gray-800 mb-4">
-            Artigo não encontrado
+            {error || "Artigo não encontrado"}
           </h2>
           <p className="text-gray-600 mb-6">
             O artigo solicitado não foi encontrado ou não está disponível.
@@ -179,6 +218,10 @@ const ArtigoDetalhesPage = () => {
     );
   }
 
+  // Usar a URL do PDF da variável de ambiente ou do artigo
+  const pdfUrl =
+    artigo?.caminhoPDF || process.env.NEXT_PUBLIC_PDF_URL || "/pdf/ACEx_5.pdf";
+
   return (
     <div className="w-full">
       <div className="h-12 bg-[#304358] flex items-center px-4">
@@ -192,7 +235,7 @@ const ArtigoDetalhesPage = () => {
       <div className="flex justify-between bg-gray-200 min-h-screen">
         <div className=""></div>
         <div className="flex flex-col h-full">
-          <div className="bg-white min-h-screen w-[30vw] p-10">
+          <div className="bg-white min-h-screen w-fit p-10">
             <div className="flex flex-col gap-6 fixed w-[25vw]">
               <div className="w-20 h-20 rounded-full bg-blue-100 flex items-center justify-center">
                 <FaFilePdf className="text-3xl text-[#304358]" />
@@ -203,7 +246,9 @@ const ArtigoDetalhesPage = () => {
               <h2 className="font-semibold text-gray-800">
                 <div className="flex items-center gap-2">
                   <FaUser className="text-gray-600" />
-                  <span>Autores: {artigo.autores.join(", ")}</span>
+                  <span>
+                    Autores: {artigo.autores?.join(", ") || "Não especificado"}
+                  </span>
                 </div>
               </h2>
               {artigo.nota && (
@@ -214,23 +259,37 @@ const ArtigoDetalhesPage = () => {
                   </div>
                 </h2>
               )}
-              <h2 className="font-semibold text-gray-800">
-                <div className="flex items-start gap-2">
-                  <FaTags className="text-gray-600 mt-1" />
-                  <span>
-                    Palavras-chave:{" "}
-                    <span className="text-[#304358] font-medium">
-                      {artigo.palavrasChave.join(", ")}
+              {artigo.palavrasChave && artigo.palavrasChave.length > 0 && (
+                <h2 className="font-semibold text-gray-800">
+                  <div className="flex items-start gap-2">
+                    <FaTags className="text-gray-600 mt-1" />
+                    <span>
+                      Palavras-chave:{" "}
+                      <span className="text-[#304358] font-medium">
+                        {artigo.palavrasChave.join(", ")}
+                      </span>
                     </span>
-                  </span>
+                  </div>
+                </h2>
+              )}
+              {artigo.resumo && (
+                <div className="mt-4">
+                  <h3 className="font-semibold text-gray-800 mb-2">Resumo:</h3>
+                  <p className="text-gray-700">{artigo.resumo}</p>
                 </div>
-              </h2>
-              <div className="mt-4">
-                <h3 className="font-semibold text-gray-800 mb-2">Resumo:</h3>
-                <p className="text-gray-700">{artigo.resumo}</p>
-              </div>
+              )}
 
               {/* Componente de avaliação por estrelas */}
+              <div className="mt-6 pt-4 border-t border-gray-200">
+                <h3 className="font-semibold text-gray-800 mb-3">
+                  Avaliação final:
+                </h3>
+                <StarRating
+                  initialRating={rating}
+                  onChange={handleRatingChange}
+                  size="lg"
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -240,20 +299,9 @@ const ArtigoDetalhesPage = () => {
             initialComments={comments}
             onCommentChange={handleCommentChange}
           />
-          <WebViewer pdfUrl={artigo.caminhoPDF} />
+          <WebViewer pdfUrl={pdfUrl} />
         </div>
-        <div className="bg-white w-[30%] min-h-screen p-5 flex flex-col items-center">
-          <div className="mt-6 pt-4 ">
-            <h3 className="font-semibold text-gray-800 mb-3">
-              Avalie este artigo:
-            </h3>
-            <StarRating
-              initialRating={artigo.nota || 0}
-              onChange={handleRatingChange}
-              size="lg"
-            />
-          </div>
-        </div>
+        <div className="bg-white w-[30%] min-h-screen"></div>
       </div>
 
       {/* Botão de salvar fixado no canto inferior direito */}

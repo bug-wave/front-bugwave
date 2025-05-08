@@ -1,5 +1,5 @@
 // Serviço para entidade Evento
-const eventosMock = require("../data/eventos.mock");
+import eventosMock from "../data/eventos.mock";
 
 class EventoService {
   constructor() {
