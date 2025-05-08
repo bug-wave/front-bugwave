@@ -142,58 +142,72 @@ const ArtigoDetalhesPage = () => {
 
     try {
       // 1. Salvar avaliação final (nota) como coordenador
+      const userId = localStorage.getItem("userId") || "1";
+
+      // No formato que o backend espera (usando _id do artigo)
       const avaliacaoData = {
-        artigoId,
+        artigoId: artigo?._id || artigoId, // Usar o _id do artigo ou o ID da URL
+        avaliadorId: userId,
         nota: rating,
-        avaliadorId: localStorage.getItem("userId") || "1", // Idealmente, pegar o ID do usuário logado
-        isFinal: true, // Indicar que é a avaliação final do coordenador
+        comentarios: "", // Campo obrigatório, mesmo que vazio
+        isFinal: true,
       };
 
-      const avaliacaoResponse = await AvaliacaoService.create(avaliacaoData);
+      console.log("Enviando avaliação:", avaliacaoData);
 
-      if (!avaliacaoResponse.success) {
-        throw new Error(`Erro ao salvar avaliação: ${avaliacaoResponse.error}`);
+      // Tente fazer uma requisição direta em vez de usar o serviço
+      const response = await fetch(`http://localhost:5000/avaliacao`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify(avaliacaoData),
+      });
+
+      const responseData = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          `Erro ao salvar avaliação: ${
+            responseData.message || response.statusText
+          }`
+        );
       }
 
-      // 2. Salvar comentários novos
-      const comentariosParaSalvar = comments.filter(
-        (c) => !c.id || (typeof c.id === "string" && c.id.startsWith("temp_"))
-      );
+      console.log("Avaliação salva:", responseData);
+
+      // 2. Salvar comentários novos - comentários com IDs temporários ou negativos
+      const comentariosParaSalvar = comments.filter((c) => !c.id || c.id < 0);
 
       for (const comentario of comentariosParaSalvar) {
         const comentarioData = {
-          artigoId,
+          artigoId: artigo?._id || artigoId,
+          autor: userId,
           texto: comentario.text,
-          posicaoX: comentario.x,
-          posicaoY: comentario.y,
-          autorId: localStorage.getItem("userId") || "1", // Idealmente, pegar o ID do usuário logado
-          tipo: "COORDENADOR", // Indicar que é um comentário de coordenador
+          x: comentario.x,
+          y: comentario.y,
+          trechoComentado: "", // Campo necessário conforme a interface Comentario
+          criadoEm: new Date(),
         };
 
-        await ComentarioService.create(comentarioData);
+        // Fazer requisição direta para o endpoint de comentários
+        await fetch(`http://localhost:5000/comentario`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+          body: JSON.stringify(comentarioData),
+        });
       }
 
-      // 3. Atualizar comentários editados
-      const comentariosParaAtualizar = comments.filter(
-        (c) => c.id && !String(c.id).startsWith("temp_") && c.isEdited
-      );
-
-      for (const comentario of comentariosParaAtualizar) {
-        const comentarioData = {
-          id: comentario.id,
-          texto: comentario.text,
-          posicaoX: comentario.x,
-          posicaoY: comentario.y,
-        };
-
-        await ComentarioService.update(comentarioData);
-      }
-
-      // 4. Atualizar o status do artigo, se necessário
-      // Implementar conforme necessário
+      // 3. Atualizar comentários editados - se houver um flag isEdited
+      // Omitindo este bloco temporariamente para isolar o problema
 
       alert("Avaliação e comentários salvos com sucesso!");
-    } catch (err: any) {
+    } catch (error) {
+      const err = error as Error;
       console.error("Erro ao salvar dados:", err);
       alert(`Erro ao salvar: ${err.message || "Erro desconhecido"}`);
     } finally {
@@ -247,8 +261,8 @@ const ArtigoDetalhesPage = () => {
       </div>
       <div className="flex justify-between bg-gray-200 min-h-screen">
         <div className="w-14"></div>
-        <div className="flex flex-col h-full">
-          <div className="bg-white min-h-screen w-[25vw] p-10">
+        <div className="flex flex-col h-auto">
+          <div className="bg-white min-h-screen h-full w-[25vw] p-5">
             <div className="flex flex-col gap-6 fixed w-[25vw]">
               <div className="w-20 h-20 rounded-full bg-blue-100 flex items-center justify-center">
                 <FaFilePdf className="text-3xl text-[#304358]" />
@@ -286,7 +300,7 @@ const ArtigoDetalhesPage = () => {
                 </h2>
               )}
               {artigo.resumo && (
-                <div className="mt-4">
+                <div className="mt-4 p-8">
                   <h3 className="font-semibold text-gray-800 mb-2">Resumo:</h3>
                   <p className="text-gray-700">{artigo.resumo}</p>
                 </div>
