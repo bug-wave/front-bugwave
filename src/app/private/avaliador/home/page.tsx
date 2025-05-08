@@ -62,6 +62,7 @@ const AvaliadoresHomePage = () => {
     setLoading(true);
     setEventoSelecionado(evento);
     setError(null);
+    console.log(evento)
 
     try {
       // Aqui estamos recuperando todos os artigos associados ao evento
@@ -85,9 +86,9 @@ const AvaliadoresHomePage = () => {
         .map((res) => res.data as ArtigoItem)
         // Filtra apenas artigos que estejam com status para avaliação
         .filter((artigo) =>
-          ["PARA_AVALIAR", "EM_AVALIACAO"].includes(artigo.status)
+          ["PARA_AVALIAR", "EM_AVALIACAO", "EM_CONFIRMACAO"].includes(artigo.status)
         );
-
+      
       setArtigosPorEvento(artigosFiltrados);
     } catch (error: any) {
       console.error("Erro ao carregar artigos para avaliação:", error);
@@ -100,7 +101,7 @@ const AvaliadoresHomePage = () => {
   // Função para avaliar um artigo específico
   const avaliarArtigo = (artigo: ArtigoItem) => {
     // Redirecionar para a página de avaliação do artigo
-    router.push(`/private/avaliador/artigoAluno?id=${artigo.id}`);
+    router.push(`/private/avaliador/artigoAluno?id=${artigo._id}`);
   };
 
   // Função para voltar à lista de eventos
@@ -225,9 +226,9 @@ const AvaliadoresHomePage = () => {
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {artigosPorEvento.map((artigo) => (
+                {artigosPorEvento.map((artigo, index) => (
                   <div
-                    key={artigo.id}
+                    key={index}
                     onClick={() => avaliarArtigo(artigo)}
                     className="bg-white border border-gray-100 rounded-xl shadow-md hover:shadow-lg p-5 cursor-pointer transition-all duration-200 hover:-translate-y-1"
                   >
@@ -319,9 +320,9 @@ const AvaliadoresHomePage = () => {
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 p-4">
-                {eventos.map((evento) => (
+                {eventos.map((evento, index) => (
                   <div
-                    key={evento.id}
+                    key={index}
                     onClick={() => buscarArtigosPorEvento(evento)}
                     className="group bg-white border border-gray-100 rounded-xl shadow-md hover:shadow-xl p-6 cursor-pointer transition-all duration-200 hover:-translate-y-1"
                   >
