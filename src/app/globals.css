@@ -1,1 +1,6 @@
 @import "tailwindcss";
+
+/* Oculta o badge do Next.js DevTools */
+[data-next-badge] {
+  display: none !important;
+}

@@ -2,6 +2,7 @@
 // Se estiver usando o App Router do Next.js (pasta app/)
 import "boxicons/css/boxicons.min.css";
 import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 
 export default function Home() {
   const router = useRouter();
@@ -15,6 +16,18 @@ export default function Home() {
   const goAval = () => {
     router.push("private/coordenador/evento");
   };
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const badge = document.querySelector("[data-next-badge]");
+      if (badge) {
+        badge.remove();
+        clearInterval(interval);
+      }
+    }, 500);
+
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <div className="w-screen h-screen flex items-center justify-center bg-slate-900 gap-2 text-white font-semibold">
